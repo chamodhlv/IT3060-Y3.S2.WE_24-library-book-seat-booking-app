@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 import 'profile_screen.dart';
+import 'student_seats_screen.dart';
+import 'student_bookings_screen.dart';
 
 /// Placeholder screen for features not yet implemented.
 class _PlaceholderScreen extends StatelessWidget {
@@ -51,21 +53,22 @@ class StudentShell extends StatefulWidget {
 
 class _StudentShellState extends State<StudentShell> {
   int _currentIndex = 0;
-
-  final List<Widget> _screens = [
-    const _PlaceholderScreen(title: 'Home', icon: Icons.home_outlined),
-    const _PlaceholderScreen(title: 'Seats', icon: Icons.event_seat_outlined),
-    const _PlaceholderScreen(title: 'Bookings', icon: Icons.calendar_today_outlined),
-    const _PlaceholderScreen(title: 'Books', icon: Icons.menu_book_outlined),
-    const ProfileScreen(),
-  ];
+  int _bookingsKeyCounter = 0;
 
   @override
   Widget build(BuildContext context) {
+    final screens = [
+      const _PlaceholderScreen(title: 'Home', icon: Icons.home_outlined),
+      const StudentSeatsScreen(),
+      StudentBookingsScreen(key: ValueKey(_bookingsKeyCounter)),
+      const _PlaceholderScreen(title: 'Books', icon: Icons.menu_book_outlined),
+      const ProfileScreen(),
+    ];
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: screens,
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -100,7 +103,10 @@ class _StudentShellState extends State<StudentShell> {
   Widget _buildNavItem(int index, IconData icon, IconData activeIcon, String label) {
     final isSelected = _currentIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _currentIndex = index),
+      onTap: () => setState(() {
+        _currentIndex = index;
+        if (index == 2) _bookingsKeyCounter++;
+      }),
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
