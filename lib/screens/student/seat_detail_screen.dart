@@ -32,7 +32,9 @@ class _SeatDetailScreenState extends State<SeatDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _days = List.generate(4, (i) => DateTime.now().add(Duration(days: i)));
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    _days = List.generate(4, (i) => today.add(Duration(days: i)));
     _loadSlots();
   }
 
@@ -55,7 +57,11 @@ class _SeatDetailScreenState extends State<SeatDetailScreen> {
 
   /// Handle tapping a time slot.
   void _onSlotTap(int hour) {
-    if (_bookedHours.contains(hour)) return;
+    final selectedDate = _days[_selectedDayIndex];
+    final now = DateTime.now();
+    final slotStart = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, hour);
+
+    if (_bookedHours.contains(hour) || slotStart.isBefore(now)) return;
 
     setState(() {
       if (_selectedHours.contains(hour)) {
@@ -76,12 +82,13 @@ class _SeatDetailScreenState extends State<SeatDetailScreen> {
 
         // Check if the new hour is adjacent
         if (hour == minH - 1 || hour == maxH + 1) {
-          // Check no booked hours in the range
+          // Check no booked or past hours in the range
           final rangeMin = (hour < minH) ? hour : minH;
           final rangeMax = (hour > maxH) ? hour : maxH;
           bool hasConflict = false;
           for (int h = rangeMin; h <= rangeMax; h++) {
-            if (_bookedHours.contains(h)) {
+            final hStart = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, h);
+            if (_bookedHours.contains(h) || hStart.isBefore(now)) {
               hasConflict = true;
               break;
             }
@@ -116,6 +123,23 @@ class _SeatDetailScreenState extends State<SeatDetailScreen> {
     if (_selectedHours.isEmpty) return;
     final user = AuthService().currentUser;
     if (user == null) return;
+
+    final selectedDate = _days[_selectedDayIndex];
+    final now = DateTime.now();
+
+    for (final hour in _selectedHours) {
+      final slotStart = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, hour);
+      if (slotStart.isBefore(now)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cannot book a time slot in the past.'),
+            backgroundColor: AppTheme.errorRed,
+          ),
+        );
+        _loadSlots();
+        return;
+      }
+    }
 
     setState(() => _isBooking = true);
 
@@ -420,6 +444,10 @@ class _SeatDetailScreenState extends State<SeatDetailScreen> {
   Widget _buildSlotRow(int hour, {bool isLast = false}) {
     final isBooked = _bookedHours.contains(hour);
     final isSelected = _selectedHours.contains(hour);
+    final selectedDate = _days[_selectedDayIndex];
+    final now = DateTime.now();
+    final slotStart = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, hour);
+    final isPast = slotStart.isBefore(now);
     final label = '${_formatHour(hour)}–${_formatHour(hour + 1)}';
 
     Color bgColor = Colors.transparent;
@@ -428,7 +456,12 @@ class _SeatDetailScreenState extends State<SeatDetailScreen> {
     Color statusBg = const Color(0xFFDCFCE7);
     Color statusText2 = const Color(0xFF16A34A);
 
-    if (isBooked) {
+    if (isPast) {
+      statusText = 'Past';
+      statusBg = const Color(0xFFF3F4F6);
+      statusText2 = AppTheme.textMuted;
+      textColor = AppTheme.textMuted;
+    } else if (isBooked) {
       statusText = 'Booked';
       statusBg = const Color(0xFFFFE4E4);
       statusText2 = AppTheme.errorRed;
@@ -440,8 +473,10 @@ class _SeatDetailScreenState extends State<SeatDetailScreen> {
       statusText2 = Colors.white;
     }
 
+    final isInteractive = !isBooked && !isPast;
+
     return GestureDetector(
-      onTap: isBooked ? null : () => _onSlotTap(hour),
+      onTap: isInteractive ? () => _onSlotTap(hour) : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

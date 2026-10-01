@@ -180,6 +180,7 @@ class _LibrarianBookingsScreenState extends State<LibrarianBookingsScreen>
         ),
         child: TabBar(
           controller: _tabController,
+          indicatorSize: TabBarIndicatorSize.tab,
           indicator: BoxDecoration(
             color: AppTheme.primaryDark,
             borderRadius: BorderRadius.circular(20),

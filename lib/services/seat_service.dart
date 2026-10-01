@@ -149,14 +149,21 @@ class SeatService {
     return booked;
   }
 
-  /// Returns whether a seat has ANY available slots today or in the next 4 days.
+  /// Returns whether a seat has ANY available future slots today or in the next 4 days.
   Future<bool> seatHasAvailability(String seatId) async {
     final now = DateTime.now();
     for (int d = 0; d < 4; d++) {
       final date = now.add(Duration(days: d));
       final booked = await getBookedHours(seatId, date);
       // Operating hours: 8-17 = 9 slots
-      if (booked.length < 9) return true;
+      int unbookableCount = 0;
+      for (int h = 8; h < 17; h++) {
+        final slotStart = DateTime(date.year, date.month, date.day, h);
+        if (booked.contains(h) || slotStart.isBefore(now)) {
+          unbookableCount++;
+        }
+      }
+      if (unbookableCount < 9) return true;
     }
     return false;
   }
@@ -187,9 +194,17 @@ class SeatService {
     // Get all active seats
     final seats = await getSeats();
     final Map<String, bool> result = {};
+    final now = DateTime.now();
     for (final seat in seats) {
       final booked = bookedHoursMap[seat.id] ?? {};
-      result[seat.id] = booked.length < 9; // true = has availability
+      int unbookableCount = 0;
+      for (int h = 8; h < 17; h++) {
+        final slotStart = DateTime(date.year, date.month, date.day, h);
+        if (booked.contains(h) || slotStart.isBefore(now)) {
+          unbookableCount++;
+        }
+      }
+      result[seat.id] = unbookableCount < 9; // true = has available future slots
     }
     return result;
   }
@@ -203,6 +218,12 @@ class SeatService {
     required int endHour,
     bool reminderEnabled = false,
   }) async {
+    final now = DateTime.now();
+    final slotStart = DateTime(date.year, date.month, date.day, startHour);
+    if (slotStart.isBefore(now)) {
+      throw Exception('Cannot book a time slot in the past.');
+    }
+
     final qrToken = generateQrToken();
     final data = await _client
         .from('seat_bookings')

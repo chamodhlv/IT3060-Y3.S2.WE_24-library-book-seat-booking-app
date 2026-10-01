@@ -135,6 +135,7 @@ class _StudentBookingsScreenState extends State<StudentBookingsScreen>
         ),
         child: TabBar(
           controller: _tabController,
+          indicatorSize: TabBarIndicatorSize.tab,
           indicator: BoxDecoration(
             color: AppTheme.primaryDark,
             borderRadius: BorderRadius.circular(20),
