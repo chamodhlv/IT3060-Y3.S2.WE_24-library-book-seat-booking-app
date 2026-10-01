@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 import '../../services/auth_service.dart';
@@ -155,11 +156,11 @@ class _LibrarianShellState extends State<LibrarianShell> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItem(0, Icons.home_outlined, Icons.home, 'Home'),
-                _buildNavItem(1, Icons.event_seat_outlined, Icons.event_seat, 'Seats'),
-                _buildNavItem(2, Icons.calendar_today_outlined, Icons.calendar_today, 'Bookings'),
-                _buildNavItem(3, Icons.menu_book_outlined, Icons.menu_book, 'Books'),
-                _buildNavItem(4, Icons.people_outline, Icons.people, 'Users'),
+                _buildNavItem(0, 'assets/images/nav/home.svg', 'Home'),
+                _buildNavItem(1, 'assets/images/nav/seats.svg', 'Seats'),
+                _buildNavItem(2, 'assets/images/nav/bookings.svg', 'Bookings'),
+                _buildNavItem(3, 'assets/images/nav/books.svg', 'Books'),
+                _buildNavItem(4, 'assets/images/nav/profile.svg', 'Users'),
               ],
             ),
           ),
@@ -168,7 +169,7 @@ class _LibrarianShellState extends State<LibrarianShell> {
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, IconData activeIcon, String label) {
+  Widget _buildNavItem(int index, String assetPath, String label) {
     final isSelected = _currentIndex == index;
     return GestureDetector(
       onTap: () => setState(() => _currentIndex = index),
@@ -179,10 +180,14 @@ class _LibrarianShellState extends State<LibrarianShell> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              isSelected ? activeIcon : icon,
-              color: isSelected ? AppTheme.primaryDark : AppTheme.textMuted,
-              size: 24,
+            SvgPicture.asset(
+              assetPath,
+              width: 24,
+              height: 24,
+              colorFilter: ColorFilter.mode(
+                isSelected ? AppTheme.primaryDark : AppTheme.textMuted,
+                BlendMode.srcIn,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
