@@ -15,21 +15,25 @@ class StudentBookingsScreen extends StatefulWidget {
 }
 
 class _StudentBookingsScreenState extends State<StudentBookingsScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+    with TickerProviderStateMixin {
+  late TabController _seatTabController;
+  late TabController _bookTabController;
+  int _selectedCategoryIndex = 0; // 0 = Seats, 1 = Books
   List<SeatBooking> _bookings = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _seatTabController = TabController(length: 2, vsync: this);
+    _bookTabController = TabController(length: 3, vsync: this);
     _load();
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _seatTabController.dispose();
+    _bookTabController.dispose();
     super.dispose();
   }
 
@@ -84,8 +88,13 @@ class _StudentBookingsScreenState extends State<StudentBookingsScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(),
-            _buildTabs(),
-            Expanded(child: _buildTabView()),
+            _buildCategorySelector(),
+            if (_selectedCategoryIndex == 0) ...[
+              _buildSeatTabs(),
+              Expanded(child: _buildSeatTabView()),
+            ] else ...[
+              Expanded(child: _buildBookHoldsSection()),
+            ],
           ],
         ),
       ),
@@ -102,15 +111,25 @@ class _StudentBookingsScreenState extends State<StudentBookingsScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('My Bookings',
-                    style: GoogleFonts.inter(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textPrimary)),
-                if (active > 0)
-                  Text('$active active reservation${active > 1 ? 's' : ''}',
-                      style: GoogleFonts.inter(
-                          fontSize: 13, color: AppTheme.primaryGreen)),
+                Text(
+                  _selectedCategoryIndex == 0 ? 'My Seat Bookings' : 'My Book Holds',
+                  style: GoogleFonts.inter(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary),
+                ),
+                Text(
+                  _selectedCategoryIndex == 0
+                      ? (active > 0
+                          ? '$active active reservation${active > 1 ? 's' : ''}'
+                          : 'No active seat reservations')
+                      : 'Physical book reservations & holds',
+                  style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: active > 0 && _selectedCategoryIndex == 0
+                          ? AppTheme.primaryGreen
+                          : AppTheme.textSecondary),
+                ),
               ],
             ),
           ),
@@ -124,9 +143,104 @@ class _StudentBookingsScreenState extends State<StudentBookingsScreen>
     );
   }
 
-  Widget _buildTabs() {
+  Widget _buildCategorySelector() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+      child: Container(
+        height: 42,
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceLight,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.divider),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _selectedCategoryIndex = 0),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  decoration: BoxDecoration(
+                    color: _selectedCategoryIndex == 0
+                        ? AppTheme.primaryDark
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.event_seat_outlined,
+                        size: 16,
+                        color: _selectedCategoryIndex == 0
+                            ? Colors.white
+                            : AppTheme.textSecondary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Seats',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: _selectedCategoryIndex == 0
+                              ? Colors.white
+                              : AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _selectedCategoryIndex = 1),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  decoration: BoxDecoration(
+                    color: _selectedCategoryIndex == 1
+                        ? AppTheme.primaryDark
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.menu_book_outlined,
+                        size: 16,
+                        color: _selectedCategoryIndex == 1
+                            ? Colors.white
+                            : AppTheme.textSecondary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Books',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: _selectedCategoryIndex == 1
+                              ? Colors.white
+                              : AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSeatTabs() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
       child: Container(
         height: 38,
         decoration: BoxDecoration(
@@ -134,7 +248,7 @@ class _StudentBookingsScreenState extends State<StudentBookingsScreen>
           borderRadius: BorderRadius.circular(20),
         ),
         child: TabBar(
-          controller: _tabController,
+          controller: _seatTabController,
           indicatorSize: TabBarIndicatorSize.tab,
           indicator: BoxDecoration(
             color: AppTheme.primaryDark,
@@ -156,18 +270,162 @@ class _StudentBookingsScreenState extends State<StudentBookingsScreen>
     );
   }
 
-  Widget _buildTabView() {
+  Widget _buildSeatTabView() {
     if (_isLoading) {
       return const Center(
           child: CircularProgressIndicator(color: AppTheme.primaryDark));
     }
 
     return TabBarView(
-      controller: _tabController,
+      controller: _seatTabController,
       children: [
         _buildList(_upcoming, isUpcoming: true),
         _buildList(_past, isUpcoming: false),
       ],
+    );
+  }
+
+  Widget _buildBookHoldsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+          child: Container(
+            height: 38,
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceLight,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: TabBar(
+              controller: _bookTabController,
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicator: BoxDecoration(
+                color: AppTheme.primaryDark,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              labelColor: Colors.white,
+              unselectedLabelColor: AppTheme.textSecondary,
+              labelStyle:
+                  GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+              unselectedLabelStyle:
+                  GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w400),
+              dividerColor: Colors.transparent,
+              tabs: const [
+                Tab(text: 'Current Holds'),
+                Tab(text: 'Borrowed'),
+                Tab(text: 'History'),
+              ],
+            ),
+          ),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _bookTabController,
+            children: [
+              _buildBookTabPlaceholder(
+                title: 'No active book holds',
+                subtitle: 'Reserve physical library books and pick them up at the desk.',
+                icon: Icons.bookmark_added_outlined,
+              ),
+              _buildBookTabPlaceholder(
+                title: 'No borrowed books',
+                subtitle: 'Books you currently have checked out will appear here.',
+                icon: Icons.menu_book_outlined,
+              ),
+              _buildBookTabPlaceholder(
+                title: 'No borrowing history',
+                subtitle: 'Returned library books and past hold records will be stored here.',
+                icon: Icons.history_rounded,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBookTabPlaceholder({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+  }) {
+    return RefreshIndicator(
+      color: AppTheme.primaryDark,
+      onRefresh: () async {},
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppTheme.divider),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ],
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryGreen.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, size: 28, color: AppTheme.primaryGreen),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitle,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(color: AppTheme.divider),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      const Icon(Icons.auto_awesome_rounded,
+                          size: 16, color: AppTheme.primaryGreen),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Book Reservation & Borrowing Module is prepared and ready for upcoming catalog integration.',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

@@ -18,12 +18,20 @@ class _StudentSeatsScreenState extends State<StudentSeatsScreen> {
   List<Seat> _seats = [];
   Map<String, bool> _availability = {}; // seatId -> hasAvailability
   bool _isLoading = true;
-  final DateTime _selectedDate = DateTime.now();
+  late List<DateTime> _days;
+  int _selectedDayIndex = 0;
   DateTime _lastSync = DateTime.now();
 
   @override
   void initState() {
     super.initState();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    _days = List.generate(4, (i) => today.add(Duration(days: i)));
+    // If today's operating hours are already past (>= 17:00 = 5 PM), default to Tomorrow (index 1)
+    if (now.hour >= 17) {
+      _selectedDayIndex = 1;
+    }
     _load();
   }
 
@@ -32,7 +40,7 @@ class _StudentSeatsScreenState extends State<StudentSeatsScreen> {
     try {
       await SeatService().expireOldBookings();
       final seats = await SeatService().getSeats(section: _selectedSection);
-      final avail = await SeatService().getSeatAvailabilityForDate(_selectedDate);
+      final avail = await SeatService().getSeatAvailabilityForDate(_days[_selectedDayIndex]);
       setState(() {
         _seats = seats;
         _availability = avail;
@@ -60,6 +68,7 @@ class _StudentSeatsScreenState extends State<StudentSeatsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(),
+            _buildDayPicker(),
             _buildSectionTabs(),
             Expanded(child: _buildBody()),
           ],
@@ -129,9 +138,89 @@ class _StudentSeatsScreenState extends State<StudentSeatsScreen> {
     );
   }
 
+  Widget _buildDayPicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+          child: Text(
+            'CHOOSE A DAY',
+            style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textMuted,
+                letterSpacing: 1.2),
+          ),
+        ),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(
+            border: Border.all(color: AppTheme.divider),
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.white,
+          ),
+          child: Row(
+            children: List.generate(_days.length, (i) {
+              final d = _days[i];
+              final isSelected = i == _selectedDayIndex;
+              final dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+              final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+              final label = i == 0 ? 'Today' : (i == 1 ? 'Tomorrow' : dayNames[d.weekday - 1]);
+              final dateLabel = '${d.day} ${monthNames[d.month - 1]}';
+
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() => _selectedDayIndex = i);
+                    _load();
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppTheme.primaryDark : null,
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          label,
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected
+                                ? Colors.white70
+                                : AppTheme.textMuted,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          dateLabel,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: isSelected
+                                ? Colors.white
+                                : AppTheme.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSectionTabs() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
       child: Row(
         children: [
           _buildTab(SeatSection.mainHall),
@@ -218,7 +307,7 @@ class _StudentSeatsScreenState extends State<StudentSeatsScreen> {
                     size: 14, color: AppTheme.textMuted),
                 const SizedBox(width: 6),
                 Text(
-                  'Tap a free seat to see available times',
+                  'Tap any seat to view time slots & book',
                   style: GoogleFonts.inter(
                       fontSize: 12, color: AppTheme.textMuted),
                 ),
@@ -279,16 +368,17 @@ class _StudentSeatsScreenState extends State<StudentSeatsScreen> {
     final occupiedColor = const Color(0xFFE8A09A); // rose
 
     return GestureDetector(
-      onTap: hasAvailability
-          ? () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => SeatDetailScreen(seat: seat),
-                ),
-              ).then((_) => _load());
-            }
-          : null,
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SeatDetailScreen(
+              seat: seat,
+              initialDayIndex: _selectedDayIndex,
+            ),
+          ),
+        ).then((_) => _load());
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: isPod ? null : 52,
@@ -298,21 +388,15 @@ class _StudentSeatsScreenState extends State<StudentSeatsScreen> {
           borderRadius: BorderRadius.circular(10),
         ),
         child: Center(
-          child: hasAvailability
-              ? Text(
-                  seat.label,
-                  style: GoogleFonts.inter(
-                    fontSize: isPod ? 12 : 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                  textAlign: TextAlign.center,
-                )
-              : Icon(
-                  Icons.close_rounded,
-                  size: 20,
-                  color: Colors.white.withValues(alpha: 0.8),
-                ),
+          child: Text(
+            seat.label,
+            style: GoogleFonts.inter(
+              fontSize: isPod ? 12 : 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+            textAlign: TextAlign.center,
+          ),
         ),
       ),
     );
@@ -321,9 +405,9 @@ class _StudentSeatsScreenState extends State<StudentSeatsScreen> {
   Widget _buildLegend() {
     return Row(
       children: [
-        _legendDot(const Color(0xFF4A7C68), 'Free'),
+        _legendDot(const Color(0xFF4A7C68), 'Free (Available slots)'),
         const SizedBox(width: 16),
-        _legendDot(const Color(0xFFE8A09A), 'Occupied'),
+        _legendDot(const Color(0xFFE8A09A), 'Fully booked'),
       ],
     );
   }

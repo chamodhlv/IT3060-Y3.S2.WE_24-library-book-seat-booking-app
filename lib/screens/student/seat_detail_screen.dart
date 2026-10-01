@@ -9,8 +9,13 @@ import 'booking_confirmation_screen.dart';
 /// Student: Seat detail — choose a day and time slots.
 class SeatDetailScreen extends StatefulWidget {
   final Seat seat;
+  final int initialDayIndex;
 
-  const SeatDetailScreen({super.key, required this.seat});
+  const SeatDetailScreen({
+    super.key,
+    required this.seat,
+    this.initialDayIndex = 0,
+  });
 
   @override
   State<SeatDetailScreen> createState() => _SeatDetailScreenState();
@@ -35,6 +40,7 @@ class _SeatDetailScreenState extends State<SeatDetailScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     _days = List.generate(4, (i) => today.add(Duration(days: i)));
+    _selectedDayIndex = widget.initialDayIndex.clamp(0, _days.length - 1);
     _loadSlots();
   }
 
