@@ -38,6 +38,9 @@ dependencies:
   google_fonts: ^6.2.1
   shared_preferences: ^2.5.2
   flutter_dotenv: ^6.0.1
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^7.4.2
+  flutter_svg: ^2.2.0
 
 dev_dependencies:
   flutter_test:
@@ -63,6 +66,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/nav/
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
