@@ -7,6 +7,7 @@ import '../auth/sign_in_screen.dart';
 import 'user_management_screen.dart';
 import 'librarian_seats_screen.dart';
 import 'librarian_bookings_screen.dart';
+import 'librarian_books_screen.dart';
 
 /// Placeholder screen for features not yet implemented.
 class _PlaceholderScreen extends StatelessWidget {
@@ -62,7 +63,7 @@ class _LibrarianShellState extends State<LibrarianShell> {
     const _PlaceholderScreen(title: 'Home', icon: Icons.home_outlined),
     const LibrarianSeatsScreen(),
     const LibrarianBookingsScreen(),
-    const _PlaceholderScreen(title: 'Books', icon: Icons.menu_book_outlined),
+    const LibrarianBooksScreen(),
     const UserManagementScreen(),
   ];
 
