@@ -8,44 +8,7 @@ import 'user_management_screen.dart';
 import 'librarian_seats_screen.dart';
 import 'librarian_bookings_screen.dart';
 import 'librarian_books_screen.dart';
-
-/// Placeholder screen for features not yet implemented.
-class _PlaceholderScreen extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  const _PlaceholderScreen({required this.title, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 64, color: AppTheme.textMuted.withValues(alpha: 0.4)),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Coming soon',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: AppTheme.textMuted,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+import 'librarian_home_screen.dart';
 
 /// Librarian bottom navigation shell.
 /// Same tabs as student but the last tab is "Users" instead of "Profile".
@@ -59,8 +22,11 @@ class LibrarianShell extends StatefulWidget {
 class _LibrarianShellState extends State<LibrarianShell> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
-    const _PlaceholderScreen(title: 'Home', icon: Icons.home_outlined),
+  late final List<Widget> _screens = [
+    LibrarianHomeScreen(
+      onNavigateTab: (index) => setState(() => _currentIndex = index),
+      onSignOut: _signOut,
+    ),
     const LibrarianSeatsScreen(),
     const LibrarianBookingsScreen(),
     const LibrarianBooksScreen(),
@@ -123,19 +89,23 @@ class _LibrarianShellState extends State<LibrarianShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _getTitleForIndex(_currentIndex),
-          style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: AppTheme.textSecondary),
-            onPressed: _signOut,
-            tooltip: 'Log out',
-          ),
-        ],
-      ),
+      appBar: _currentIndex == 0
+          ? null
+          : AppBar(
+              title: Text(
+                _getTitleForIndex(_currentIndex),
+                style: GoogleFonts.inter(
+                    fontSize: 20, fontWeight: FontWeight.w700),
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.logout_rounded,
+                      color: AppTheme.textSecondary),
+                  onPressed: _signOut,
+                  tooltip: 'Log out',
+                ),
+              ],
+            ),
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
