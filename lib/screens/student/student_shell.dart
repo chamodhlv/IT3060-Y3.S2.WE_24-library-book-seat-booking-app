@@ -5,6 +5,7 @@ import '../../config/app_theme.dart';
 import 'profile_screen.dart';
 import 'student_seats_screen.dart';
 import 'student_bookings_screen.dart';
+import 'student_books_screen.dart';
 
 /// Placeholder screen for features not yet implemented.
 class _PlaceholderScreen extends StatelessWidget {
@@ -62,7 +63,7 @@ class _StudentShellState extends State<StudentShell> {
       const _PlaceholderScreen(title: 'Home', icon: Icons.home_outlined),
       const StudentSeatsScreen(),
       StudentBookingsScreen(key: ValueKey(_bookingsKeyCounter)),
-      const _PlaceholderScreen(title: 'Books', icon: Icons.menu_book_outlined),
+      const StudentBooksScreen(),
       const ProfileScreen(),
     ];
 
