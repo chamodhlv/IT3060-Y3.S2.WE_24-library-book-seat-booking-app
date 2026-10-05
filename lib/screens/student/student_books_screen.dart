@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 import '../../models/book_model.dart';
 import '../../services/book_service.dart';
+import '../../services/auth_service.dart';
+import 'book_reservation_confirmation_screen.dart';
 
 /// Student: Browse the library catalogue (read-only).
 class StudentBooksScreen extends StatefulWidget {
@@ -449,6 +451,9 @@ class _StudentBooksScreenState extends State<StudentBooksScreen> {
       builder: (_) => _StudentBookDetailSheet(
         book: book,
         avatarColor: _avatarColor(index),
+        onReserved: () {
+          _load();
+        },
       ),
     );
   }
@@ -456,15 +461,172 @@ class _StudentBooksScreenState extends State<StudentBooksScreen> {
 
 // ─── STUDENT BOOK DETAIL SHEET ────────────────────────────────────────────────
 
-class _StudentBookDetailSheet extends StatelessWidget {
+class _StudentBookDetailSheet extends StatefulWidget {
   final Book book;
   final Color avatarColor;
+  final VoidCallback? onReserved;
 
-  const _StudentBookDetailSheet(
-      {required this.book, required this.avatarColor});
+  const _StudentBookDetailSheet({
+    required this.book,
+    required this.avatarColor,
+    this.onReserved,
+  });
+
+  @override
+  State<_StudentBookDetailSheet> createState() =>
+      _StudentBookDetailSheetState();
+}
+
+class _StudentBookDetailSheetState extends State<_StudentBookDetailSheet> {
+  bool _isReserving = false;
+  bool _hasActiveHold = false;
+  bool _checkingHold = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkActiveHold();
+  }
+
+  Future<void> _checkActiveHold() async {
+    final user = AuthService().currentUser;
+    if (user != null) {
+      try {
+        final hasHold = await BookService()
+            .hasActiveHoldOrBorrow(user.id, widget.book.id);
+        if (mounted) {
+          setState(() {
+            _hasActiveHold = hasHold;
+            _checkingHold = false;
+          });
+        }
+      } catch (_) {
+        if (mounted) setState(() => _checkingHold = false);
+      }
+    } else {
+      if (mounted) setState(() => _checkingHold = false);
+    }
+  }
+
+  Future<void> _onReservePressed() async {
+    final user = AuthService().currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please log in to reserve a book.'),
+          backgroundColor: AppTheme.errorRed,
+        ),
+      );
+      return;
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.background,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Reserve this book?',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'A copy of "${widget.book.title}" will be held for you at the library front desk for up to 3 days.',
+              style: GoogleFonts.inter(fontSize: 14, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceLight,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppTheme.divider),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.qr_code_2_rounded,
+                      size: 20, color: AppTheme.primaryDark),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'You will receive a QR confirmation to show at the desk scanner.',
+                      style: GoogleFonts.inter(
+                          fontSize: 12, color: AppTheme.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(color: AppTheme.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryDark,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Confirm Reservation'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isReserving = true);
+
+    try {
+      final reservation = await BookService().reserveBook(
+        bookId: widget.book.id,
+        userId: user.id,
+      );
+
+      widget.onReserved?.call();
+
+      if (!mounted) return;
+      Navigator.pop(context); // Close bottom sheet
+
+      // Navigate to confirmation screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BookReservationConfirmationScreen(
+            reservation: reservation,
+            book: widget.book,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isReserving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              e.toString().replaceAll('Exception: ', ''),
+            ),
+            backgroundColor: AppTheme.errorRed,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final book = widget.book;
+
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       decoration: BoxDecoration(
@@ -488,7 +650,7 @@ class _StudentBookDetailSheet extends StatelessWidget {
           ),
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -499,7 +661,7 @@ class _StudentBookDetailSheet extends StatelessWidget {
                         width: 60,
                         height: 60,
                         decoration: BoxDecoration(
-                          color: avatarColor,
+                          color: widget.avatarColor,
                           borderRadius: BorderRadius.circular(14),
                         ),
                         alignment: Alignment.center,
@@ -573,7 +735,7 @@ class _StudentBookDetailSheet extends StatelessWidget {
                           children: [
                             Text(
                               book.hasAvailableCopy
-                                  ? 'Available to borrow'
+                                  ? 'Available to reserve'
                                   : 'Currently unavailable',
                               style: GoogleFonts.inter(
                                 fontSize: 13,
@@ -588,8 +750,10 @@ class _StudentBookDetailSheet extends StatelessWidget {
                               style: GoogleFonts.inter(
                                 fontSize: 11,
                                 color: book.hasAvailableCopy
-                                    ? AppTheme.primaryGreen.withValues(alpha: 0.8)
-                                    : AppTheme.errorRed.withValues(alpha: 0.8),
+                                    ? AppTheme.primaryGreen
+                                        .withValues(alpha: 0.8)
+                                    : AppTheme.errorRed
+                                        .withValues(alpha: 0.8),
                               ),
                             ),
                           ],
@@ -656,7 +820,7 @@ class _StudentBookDetailSheet extends StatelessWidget {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Visit the library front desk to borrow this book. Show your student ID.',
+                            'Reserve this book to hold it for 3 days. When you visit the library, show your QR confirmation at the desk.',
                             style: GoogleFonts.inter(
                                 fontSize: 12,
                                 color: AppTheme.textMuted,
@@ -666,6 +830,93 @@ class _StudentBookDetailSheet extends StatelessWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 20),
+
+                  // Reserve Action Button
+                  if (_checkingHold)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: AppTheme.primaryDark),
+                      ),
+                    )
+                  else if (_hasActiveHold)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFFCD34D)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.bookmark_added_rounded,
+                              size: 18, color: Color(0xFF92400E)),
+                          const SizedBox(width: 8),
+                          Text(
+                            'You already have an active hold on this book',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF92400E),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else if (book.hasAvailableCopy)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        onPressed: _isReserving ? null : _onReservePressed,
+                        icon: _isReserving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.bookmark_add_outlined, size: 20),
+                        label: Text(
+                          _isReserving ? 'Reserving...' : 'Reserve This Book',
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryDark,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: AppTheme.divider.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'No copies currently available',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

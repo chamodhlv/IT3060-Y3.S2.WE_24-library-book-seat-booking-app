@@ -3,7 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../config/app_theme.dart';
 import '../../models/seat_model.dart';
+import '../../models/book_reservation_model.dart';
 import '../../services/seat_service.dart';
+import '../../services/book_service.dart';
 
 /// Librarian: Booking management screen with QR check-in & manual check-in.
 class LibrarianBookingsScreen extends StatefulWidget {
@@ -20,6 +22,7 @@ class _LibrarianBookingsScreenState extends State<LibrarianBookingsScreen>
   late TabController _bookTabController;
   int _selectedCategoryIndex = 0; // 0 = Seat Bookings, 1 = Book Holds
   List<SeatBooking> _bookings = [];
+  List<BookReservation> _bookReservations = [];
   bool _isLoading = true;
   DateTime _selectedDate = DateTime.now();
 
@@ -44,9 +47,13 @@ class _LibrarianBookingsScreenState extends State<LibrarianBookingsScreen>
     setState(() => _isLoading = true);
     try {
       await SeatService().expireOldBookings();
-      final bookings = await SeatService().getAllBookings(date: _selectedDate);
+      final seatFuture = SeatService().getAllBookings(date: _selectedDate);
+      final bookFuture = BookService().getAllReservations();
+
+      final results = await Future.wait([seatFuture, bookFuture]);
       setState(() {
-        _bookings = bookings;
+        _bookings = results[0] as List<SeatBooking>;
+        _bookReservations = results[1] as List<BookReservation>;
         _isLoading = false;
       });
     } catch (_) {
@@ -61,6 +68,13 @@ class _LibrarianBookingsScreenState extends State<LibrarianBookingsScreen>
   List<SeatBooking> get _checkedIn => _bookings
       .where((b) => b.status == BookingStatus.checkedIn)
       .toList();
+
+  List<BookReservation> get _holdRequests =>
+      _bookReservations.where((r) => r.isReserved).toList();
+  List<BookReservation> get _issuedBooks =>
+      _bookReservations.where((r) => r.isBorrowed).toList();
+  List<BookReservation> get _returnedBooks =>
+      _bookReservations.where((r) => r.isReturned).toList();
 
   @override
   Widget build(BuildContext context) {
@@ -361,37 +375,467 @@ class _LibrarianBookingsScreenState extends State<LibrarianBookingsScreen>
               unselectedLabelStyle:
                   GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w400),
               dividerColor: Colors.transparent,
-              tabs: const [
-                Tab(text: 'Hold Requests (0)'),
-                Tab(text: 'Issued / Out (0)'),
-                Tab(text: 'Returned (0)'),
+              tabs: [
+                Tab(text: 'Hold Requests (${_holdRequests.length})'),
+                Tab(text: 'Issued / Out (${_issuedBooks.length})'),
+                Tab(text: 'Returned (${_returnedBooks.length})'),
               ],
             ),
           ),
         ),
         Expanded(
-          child: TabBarView(
-            controller: _bookTabController,
-            children: [
-              _buildLibrarianBookPlaceholder(
-                title: 'No pending book holds',
-                subtitle: 'Student book hold requests for pickup will appear here for staff approval.',
-                icon: Icons.inbox_outlined,
-              ),
-              _buildLibrarianBookPlaceholder(
-                title: 'No issued books',
-                subtitle: 'Physical books currently checked out to students will be tracked here.',
-                icon: Icons.assignment_outlined,
-              ),
-              _buildLibrarianBookPlaceholder(
-                title: 'No returned books',
-                subtitle: 'History of returned physical books and desk check-ins will be logged here.',
-                icon: Icons.assignment_turned_in_outlined,
-              ),
-            ],
-          ),
+          child: _isLoading
+              ? const Center(
+                  child:
+                      CircularProgressIndicator(color: AppTheme.primaryDark))
+              : TabBarView(
+                  controller: _bookTabController,
+                  children: [
+                    _buildLibrarianHoldRequestsTab(_holdRequests),
+                    _buildLibrarianIssuedBooksTab(_issuedBooks),
+                    _buildLibrarianReturnedBooksTab(_returnedBooks),
+                  ],
+                ),
         ),
       ],
+    );
+  }
+
+  Widget _buildLibrarianHoldRequestsTab(List<BookReservation> holds) {
+    if (holds.isEmpty) {
+      return _buildLibrarianBookPlaceholder(
+        title: 'No pending book holds',
+        subtitle:
+            'Student book hold requests for pickup will appear here for staff approval.',
+        icon: Icons.inbox_outlined,
+      );
+    }
+
+    return RefreshIndicator(
+      color: AppTheme.primaryDark,
+      onRefresh: _load,
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        itemCount: holds.length,
+        itemBuilder: (ctx, i) => _buildLibrarianHoldCard(holds[i]),
+      ),
+    );
+  }
+
+  Widget _buildLibrarianHoldCard(BookReservation hold) {
+    final book = hold.book;
+    final expires = hold.holdExpiresAt;
+    final expiryFormatted = '${expires.day}/${expires.month}/${expires.year}';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.divider),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryGreen.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.bookmark_added_rounded,
+                        size: 20, color: AppTheme.primaryGreen),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              hold.userFullName ?? 'Student',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              'Hold Requested',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF92400E),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        book?.title ?? 'Book Title',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${book?.authors ?? ""} · ${book?.shelfLocation ?? "Desk"}',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          if (hold.userStudentId != null) ...[
+                            Text(
+                              'ID: ${hold.userStudentId}',
+                              style: GoogleFonts.inter(
+                                  fontSize: 11, color: AppTheme.textMuted),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          Text(
+                            'Hold until: $expiryFormatted',
+                            style: GoogleFonts.inter(
+                                fontSize: 11, color: AppTheme.textMuted),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: AppTheme.divider),
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _issueBookDialog(hold),
+                    icon: const Icon(Icons.check_circle_outline, size: 16),
+                    label: Text(
+                      'Issue Book (Borrow)',
+                      style: GoogleFonts.inter(fontSize: 12),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryDark,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(0, 36),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: () => _cancelBookHoldDialog(hold),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.errorRed,
+                    side: const BorderSide(color: AppTheme.errorRed),
+                    minimumSize: const Size(0, 36),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text('Cancel', style: GoogleFonts.inter(fontSize: 12)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLibrarianIssuedBooksTab(List<BookReservation> issued) {
+    if (issued.isEmpty) {
+      return _buildLibrarianBookPlaceholder(
+        title: 'No issued books',
+        subtitle:
+            'Physical books currently checked out to students will be tracked here.',
+        icon: Icons.assignment_outlined,
+      );
+    }
+
+    return RefreshIndicator(
+      color: AppTheme.primaryDark,
+      onRefresh: _load,
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        itemCount: issued.length,
+        itemBuilder: (ctx, i) => _buildLibrarianIssuedCard(issued[i]),
+      ),
+    );
+  }
+
+  Widget _buildLibrarianIssuedCard(BookReservation reservation) {
+    final book = reservation.book;
+    final isOverdue = reservation.isOverdue;
+    final due = reservation.dueDate;
+    final dueFormatted =
+        due != null ? '${due.day}/${due.month}/${due.year}' : 'N/A';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.divider),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryDark.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.menu_book_rounded,
+                        size: 20, color: AppTheme.primaryDark),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              reservation.userFullName ?? 'Student',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isOverdue
+                                  ? const Color(0xFFFFE4E4)
+                                  : const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              isOverdue ? 'Overdue' : 'Borrowed',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: isOverdue
+                                    ? AppTheme.errorRed
+                                    : const Color(0xFF16A34A),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        book?.title ?? 'Book Title',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Due: $dueFormatted · Shelf: ${book?.shelfLocation ?? "Desk"}',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: isOverdue
+                              ? AppTheme.errorRed
+                              : AppTheme.textSecondary,
+                        ),
+                      ),
+                      if (reservation.userStudentId != null) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          'Student ID: ${reservation.userStudentId}',
+                          style: GoogleFonts.inter(
+                              fontSize: 11, color: AppTheme.textMuted),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: AppTheme.divider),
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _confirmReturnDialog(reservation),
+                icon: const Icon(Icons.assignment_turned_in_outlined, size: 16),
+                label: Text(
+                  'Mark as Returned',
+                  style: GoogleFonts.inter(fontSize: 12),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.successGreen,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(0, 36),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLibrarianReturnedBooksTab(List<BookReservation> returned) {
+    if (returned.isEmpty) {
+      return _buildLibrarianBookPlaceholder(
+        title: 'No returned books',
+        subtitle:
+            'History of returned physical books and desk check-ins will be logged here.',
+        icon: Icons.assignment_turned_in_outlined,
+      );
+    }
+
+    return RefreshIndicator(
+      color: AppTheme.primaryDark,
+      onRefresh: _load,
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        itemCount: returned.length,
+        itemBuilder: (ctx, i) {
+          final item = returned[i];
+          final book = item.book;
+          final retDate = item.returnedAt ?? item.updatedAt ?? item.createdAt;
+          final retDateStr = '${retDate.day}/${retDate.month}/${retDate.year}';
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppTheme.divider),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.check_circle_outline_rounded,
+                      size: 20, color: AppTheme.primaryGreen),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              book?.title ?? 'Book',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              'Returned',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.primaryGreen,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Student: ${item.userFullName ?? "Unknown"} · Returned on $retDateStr',
+                        style: GoogleFonts.inter(
+                            fontSize: 11, color: AppTheme.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -402,7 +846,7 @@ class _LibrarianBookingsScreenState extends State<LibrarianBookingsScreen>
   }) {
     return RefreshIndicator(
       color: AppTheme.primaryDark,
-      onRefresh: () async {},
+      onRefresh: _load,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
@@ -451,25 +895,6 @@ class _LibrarianBookingsScreenState extends State<LibrarianBookingsScreen>
                       color: AppTheme.textSecondary,
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  const Divider(color: AppTheme.divider),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      const Icon(Icons.auto_awesome_rounded,
-                          size: 16, color: AppTheme.primaryGreen),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Librarian Book Management Module is prepared and structured for upcoming library inventory rollout.',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: AppTheme.textMuted,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
@@ -477,6 +902,211 @@ class _LibrarianBookingsScreenState extends State<LibrarianBookingsScreen>
         ),
       ),
     );
+  }
+
+  Future<void> _issueBookDialog(BookReservation hold) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.background,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Issue Book to Student',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Student: ${hold.userFullName ?? "Unknown"}',
+                style: GoogleFonts.inter(fontSize: 14)),
+            if (hold.userStudentId != null)
+              Text('ID: ${hold.userStudentId}',
+                  style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary)),
+            const SizedBox(height: 8),
+            Text('Book: ${hold.book?.title ?? "Book"}',
+                style: GoogleFonts.inter(
+                    fontSize: 14, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Text('Loan Period: 14 days (Standard policy)',
+                style: GoogleFonts.inter(
+                    fontSize: 12, color: AppTheme.textMuted)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel',
+                style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryDark,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Confirm Issue'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await BookService().markAsBorrowed(hold.id);
+      _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Book successfully checked out to ${hold.userFullName ?? "student"}.'),
+          backgroundColor: AppTheme.successGreen,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Error: $e'), backgroundColor: AppTheme.errorRed),
+      );
+    }
+  }
+
+  Future<void> _confirmReturnDialog(BookReservation reservation) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.background,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Confirm Book Return',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Student: ${reservation.userFullName ?? "Unknown"}',
+                style: GoogleFonts.inter(fontSize: 14)),
+            const SizedBox(height: 6),
+            Text('Book: ${reservation.book?.title ?? "Book"}',
+                style: GoogleFonts.inter(
+                    fontSize: 14, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 12),
+            Text(
+              'Confirming this return will update book status to "Returned" and automatically release a copy back to shelf inventory.',
+              style: GoogleFonts.inter(
+                  fontSize: 12, color: AppTheme.textSecondary, height: 1.4),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel',
+                style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.successGreen,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Mark as Returned'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await BookService().markAsReturned(reservation.id);
+      _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Book returned and inventory updated!'),
+          backgroundColor: AppTheme.successGreen,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Error: $e'), backgroundColor: AppTheme.errorRed),
+      );
+    }
+  }
+
+  Future<void> _cancelBookHoldDialog(BookReservation hold) async {
+    final reasonCtrl = TextEditingController();
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.background,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Cancel Book Hold',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Cancel hold for "${hold.book?.title ?? "book"}" reserved by ${hold.userFullName ?? "student"}?',
+              style: GoogleFonts.inter(fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Reason (optional)',
+                hintText: 'e.g. Uncollected hold expired...',
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Keep Hold',
+                style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'Cancel Hold',
+              style: GoogleFonts.inter(
+                  color: AppTheme.errorRed, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await BookService().cancelReservation(
+        hold.id,
+        reason: reasonCtrl.text.trim().isEmpty
+            ? 'Cancelled by librarian'
+            : reasonCtrl.text.trim(),
+        cancelledBy: 'librarian',
+      );
+      _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Book hold cancelled and copy returned to shelf.'),
+          backgroundColor: AppTheme.primaryDark,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Error: $e'), backgroundColor: AppTheme.errorRed),
+      );
+    }
   }
 
   Widget _buildBookingList(List<SeatBooking> items) {
@@ -760,48 +1390,138 @@ class _LibrarianBookingsScreenState extends State<LibrarianBookingsScreen>
 
   Future<void> _handleQrScan(String token) async {
     try {
+      // 1. Check if token belongs to a Book Reservation
+      final bookRes = await BookService().getReservationByQrToken(token);
+      if (bookRes != null) {
+        if (!mounted) return;
+        await _handleBookQrAction(bookRes);
+        return;
+      }
+
+      // 2. Check if token belongs to a Seat Booking
       final booking = await SeatService().getBookingByQrToken(token);
-      if (booking == null) {
+      if (booking != null) {
+        if (booking.status != BookingStatus.confirmed) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(
+                    'Seat booking status: ${booking.status.displayName}. Cannot check in.'),
+                backgroundColor: AppTheme.warningAmber),
+          );
+          return;
+        }
+
+        // Show confirm dialog
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('No booking found for this QR code.'),
-              backgroundColor: AppTheme.errorRed),
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: AppTheme.background,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text('Seat Check In',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Student: ${booking.userFullName ?? 'Unknown'}',
+                    style: GoogleFonts.inter(fontSize: 14)),
+                Text('Seat: ${booking.seat?.label ?? 'N/A'}',
+                    style: GoogleFonts.inter(fontSize: 14)),
+                Text('Time: ${booking.timeRangeDisplay}',
+                    style: GoogleFonts.inter(fontSize: 14)),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text('Cancel',
+                    style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text('Confirm Check-in',
+                    style: GoogleFonts.inter(
+                        color: AppTheme.successGreen,
+                        fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
         );
+
+        if (confirm == true) {
+          await _checkIn(booking);
+        }
         return;
       }
 
-      if (booking.status != BookingStatus.confirmed) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  'Booking status: ${booking.status.displayName}. Cannot check in.'),
-              backgroundColor: AppTheme.warningAmber),
-        );
-        return;
-      }
-
-      // Show confirm dialog
+      // If neither found
       if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('No reservation or seat booking found for this QR code.'),
+            backgroundColor: AppTheme.errorRed),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.errorRed),
+      );
+    }
+  }
+
+  Future<void> _handleBookQrAction(BookReservation res) async {
+    if (res.status == BookReservationStatus.reserved) {
       final confirm = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: AppTheme.background,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('Check In',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          title: Text('Issue Reserved Book',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Student: ${booking.userFullName ?? 'Unknown'}',
+              Text('Student: ${res.userFullName ?? "Unknown"}',
                   style: GoogleFonts.inter(fontSize: 14)),
-              Text('Seat: ${booking.seat?.label ?? 'N/A'}',
-                  style: GoogleFonts.inter(fontSize: 14)),
-              Text('Time: ${booking.timeRangeDisplay}',
-                  style: GoogleFonts.inter(fontSize: 14)),
+              if (res.userStudentId != null)
+                Text('Student ID: ${res.userStudentId}',
+                    style: GoogleFonts.inter(
+                        fontSize: 12, color: AppTheme.textSecondary)),
+              const SizedBox(height: 8),
+              Text('Book: ${res.book?.title ?? "Book"}',
+                  style: GoogleFonts.inter(
+                      fontSize: 14, fontWeight: FontWeight.w600)),
+              if (res.book?.shelfLocation != null)
+                Text('Shelf: ${res.book!.shelfLocation}',
+                    style: GoogleFonts.inter(
+                        fontSize: 12, color: AppTheme.textMuted)),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.qr_code_2_rounded,
+                        size: 20, color: AppTheme.primaryGreen),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'QR code verified. Click confirm to mark this book as borrowed.',
+                        style: GoogleFonts.inter(
+                            fontSize: 12, color: AppTheme.primaryGreen),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
           actions: [
@@ -810,24 +1530,99 @@ class _LibrarianBookingsScreenState extends State<LibrarianBookingsScreen>
               child: Text('Cancel',
                   style: GoogleFonts.inter(color: AppTheme.textSecondary)),
             ),
-            TextButton(
+            ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: Text('Confirm Check-in',
-                  style: GoogleFonts.inter(
-                      color: AppTheme.successGreen,
-                      fontWeight: FontWeight.w600)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryDark,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Confirm Issue (Borrow)'),
             ),
           ],
         ),
       );
 
       if (confirm == true) {
-        await _checkIn(booking);
+        await BookService().markAsBorrowed(res.id);
+        _load();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Book "${res.book?.title ?? "book"}" successfully issued to ${res.userFullName}!'),
+            backgroundColor: AppTheme.successGreen,
+          ),
+        );
       }
-    } catch (e) {
-      if (!mounted) return;
+    } else if (res.status == BookReservationStatus.borrowed) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppTheme.background,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Process Book Return',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Student: ${res.userFullName ?? "Unknown"}',
+                  style: GoogleFonts.inter(fontSize: 14)),
+              const SizedBox(height: 6),
+              Text('Book: ${res.book?.title ?? "Book"}',
+                  style: GoogleFonts.inter(
+                      fontSize: 14, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 10),
+              Text(
+                'Confirm return to increment available stock and complete this loan.',
+                style: GoogleFonts.inter(
+                    fontSize: 12, color: AppTheme.textSecondary),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Cancel',
+                  style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.successGreen,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Confirm Return'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true) {
+        await BookService().markAsReturned(res.id);
+        _load();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Book return processed! Stock restored.'),
+            backgroundColor: AppTheme.successGreen,
+          ),
+        );
+      }
+    } else if (res.status == BookReservationStatus.returned) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.errorRed),
+        const SnackBar(
+          content: Text('This book was already marked as returned.'),
+          backgroundColor: AppTheme.warningAmber,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This book reservation is cancelled.'),
+          backgroundColor: AppTheme.errorRed,
+        ),
       );
     }
   }

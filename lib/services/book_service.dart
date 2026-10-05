@@ -1,7 +1,9 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/book_model.dart';
+import '../models/book_reservation_model.dart';
+import '../models/seat_model.dart' show generateQrToken;
 
-/// Service for library book CRUD operations.
+/// Service for library book CRUD and reservation operations.
 class BookService {
   static final BookService _instance = BookService._internal();
   factory BookService() => _instance;
@@ -321,5 +323,246 @@ class BookService {
   /// Hard-delete a book record.
   Future<void> deleteBook(String id) async {
     await _client.from('books').delete().eq('id', id);
+  }
+
+  // ─── BOOK RESERVATIONS & BORROWING ────────────────────────────
+
+  /// Reserve an available copy of a book for a student.
+  /// Throws Exception if no copies available or user already has an active hold/borrow.
+  Future<BookReservation> reserveBook({
+    required String bookId,
+    required String userId,
+  }) async {
+    // 1. Check if user already has an active reservation or borrow for this book
+    final existing = await _client
+        .from('book_reservations')
+        .select('id, status')
+        .eq('book_id', bookId)
+        .eq('user_id', userId)
+        .inFilter('status', ['reserved', 'borrowed'])
+        .limit(1);
+
+    if ((existing as List).isNotEmpty) {
+      throw Exception('You already have an active reservation or borrow for this book.');
+    }
+
+    // 2. Check available copies
+    final bookData = await _client
+        .from('books')
+        .select('id, title, available_copies, total_copies')
+        .eq('id', bookId)
+        .single();
+
+    final availableCopies = (bookData['available_copies'] as num?)?.toInt() ?? 0;
+    if (availableCopies <= 0) {
+      throw Exception('No copies of this book are currently available to reserve.');
+    }
+
+    // 3. Decrement available copies
+    await _client.from('books').update({
+      'available_copies': availableCopies - 1,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', bookId);
+
+    // 4. Create reservation record
+    final qrToken = generateQrToken();
+    final now = DateTime.now();
+    final res = await _client
+        .from('book_reservations')
+        .insert({
+          'book_id': bookId,
+          'user_id': userId,
+          'status': 'reserved',
+          'qr_token': qrToken,
+          'reserved_at': now.toIso8601String(),
+          'created_at': now.toIso8601String(),
+        })
+        .select('*, books(*)')
+        .single();
+
+    // 5. Notify the student
+    try {
+      await _client.from('notifications').insert({
+        'user_id': userId,
+        'title': 'Book Hold Confirmed 📚',
+        'body':
+            'Your copy of "${bookData['title']}" is held. Visit the library front desk to pick it up.',
+        'type': 'booking_confirmed',
+      });
+    } catch (_) {}
+
+    return BookReservation.fromMap(res);
+  }
+
+  /// Get all reservations / borrows for a student.
+  Future<List<BookReservation>> getStudentReservations(String userId) async {
+    final data = await _client
+        .from('book_reservations')
+        .select('*, books(*)')
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+    return (data as List).map((e) => BookReservation.fromMap(e)).toList();
+  }
+
+  /// Get all reservations across all students (Librarian view).
+  Future<List<BookReservation>> getAllReservations({
+    BookReservationStatus? status,
+  }) async {
+    var query = _client
+        .from('book_reservations')
+        .select('*, books(*), profiles(full_name, student_staff_id, email)');
+
+    if (status != null) {
+      final data = await _client
+          .from('book_reservations')
+          .select('*, books(*), profiles(full_name, student_staff_id, email)')
+          .eq('status', status.dbValue)
+          .order('created_at', ascending: false);
+      return (data as List).map((e) => BookReservation.fromMap(e)).toList();
+    }
+
+    final data = await query.order('created_at', ascending: false);
+    return (data as List).map((e) => BookReservation.fromMap(e)).toList();
+  }
+
+  /// Look up a reservation by QR token.
+  Future<BookReservation?> getReservationByQrToken(String token) async {
+    final data = await _client
+        .from('book_reservations')
+        .select('*, books(*), profiles(full_name, student_staff_id, email)')
+        .eq('qr_token', token)
+        .maybeSingle();
+    if (data == null) return null;
+    return BookReservation.fromMap(data);
+  }
+
+  /// Librarian marks a reserved book as borrowed (issued to student).
+  Future<void> markAsBorrowed(String reservationId, {DateTime? dueDate}) async {
+    final res = await _client
+        .from('book_reservations')
+        .select('*, books(title)')
+        .eq('id', reservationId)
+        .single();
+
+    final now = DateTime.now();
+    final due = dueDate ?? now.add(const Duration(days: 14));
+
+    await _client.from('book_reservations').update({
+      'status': 'borrowed',
+      'borrowed_at': now.toIso8601String(),
+      'due_date': due.toIso8601String(),
+      'updated_at': now.toIso8601String(),
+    }).eq('id', reservationId);
+
+    // Notify student
+    final bookTitle = res['books'] != null ? res['books']['title'] : 'book';
+    final dueStr = '${due.day}/${due.month}/${due.year}';
+    try {
+      await _client.from('notifications').insert({
+        'user_id': res['user_id'],
+        'title': 'Book Borrowed ✓',
+        'body': 'You have checked out "$bookTitle". Due date is $dueStr.',
+        'type': 'booking_checkin',
+      });
+    } catch (_) {}
+  }
+
+  /// Librarian marks a borrowed book as returned.
+  /// Increments available copies for the book.
+  Future<void> markAsReturned(String reservationId) async {
+    final res = await _client
+        .from('book_reservations')
+        .select('*, books(id, title, total_copies, available_copies)')
+        .eq('id', reservationId)
+        .single();
+
+    final now = DateTime.now();
+    await _client.from('book_reservations').update({
+      'status': 'returned',
+      'returned_at': now.toIso8601String(),
+      'updated_at': now.toIso8601String(),
+    }).eq('id', reservationId);
+
+    // Increment available copies
+    final book = res['books'];
+    if (book != null) {
+      final currentAvail = (book['available_copies'] as num?)?.toInt() ?? 0;
+      final total = (book['total_copies'] as num?)?.toInt() ?? currentAvail + 1;
+      final newAvail = (currentAvail + 1).clamp(0, total);
+      await _client.from('books').update({
+        'available_copies': newAvail,
+        'updated_at': now.toIso8601String(),
+      }).eq('id', book['id']);
+    }
+
+    // Notify student
+    try {
+      await _client.from('notifications').insert({
+        'user_id': res['user_id'],
+        'title': 'Book Returned 📖',
+        'body': 'Your copy of "${book?['title'] ?? 'book'}" has been successfully returned.',
+        'type': 'info',
+      });
+    } catch (_) {}
+  }
+
+  /// Cancel a book reservation. Restores available copies if it was in 'reserved' status.
+  Future<void> cancelReservation(
+    String reservationId, {
+    String? reason,
+    String? cancelledBy,
+  }) async {
+    final res = await _client
+        .from('book_reservations')
+        .select('*, books(id, title, total_copies, available_copies)')
+        .eq('id', reservationId)
+        .single();
+
+    final currentStatus = res['status'] as String;
+    if (currentStatus == 'returned' || currentStatus == 'cancelled') return;
+
+    final now = DateTime.now();
+    await _client.from('book_reservations').update({
+      'status': 'cancelled',
+      'cancelled_at': now.toIso8601String(),
+      'cancellation_reason': reason ?? 'Cancelled by ${cancelledBy ?? "student"}',
+      'updated_at': now.toIso8601String(),
+    }).eq('id', reservationId);
+
+    // If hold was cancelled, release copy back to shelf
+    if (currentStatus == 'reserved') {
+      final book = res['books'];
+      if (book != null) {
+        final currentAvail = (book['available_copies'] as num?)?.toInt() ?? 0;
+        final total = (book['total_copies'] as num?)?.toInt() ?? currentAvail + 1;
+        final newAvail = (currentAvail + 1).clamp(0, total);
+        await _client.from('books').update({
+          'available_copies': newAvail,
+          'updated_at': now.toIso8601String(),
+        }).eq('id', book['id']);
+      }
+    }
+
+    // Notify student
+    try {
+      await _client.from('notifications').insert({
+        'user_id': res['user_id'],
+        'title': 'Hold Cancelled',
+        'body': 'Reservation for "${res['books']?['title'] ?? 'book'}" was cancelled.',
+        'type': 'booking_cancelled',
+      });
+    } catch (_) {}
+  }
+
+  /// Check whether a user already holds or has borrowed a book.
+  Future<bool> hasActiveHoldOrBorrow(String userId, String bookId) async {
+    final data = await _client
+        .from('book_reservations')
+        .select('id')
+        .eq('book_id', bookId)
+        .eq('user_id', userId)
+        .inFilter('status', ['reserved', 'borrowed'])
+        .limit(1);
+    return (data as List).isNotEmpty;
   }
 }
