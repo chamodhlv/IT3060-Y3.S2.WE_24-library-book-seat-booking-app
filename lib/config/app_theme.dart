@@ -4,16 +4,17 @@ import 'package:google_fonts/google_fonts.dart';
 /// App theme configuration matching the prototype design.
 class AppTheme {
   // ─── Color Palette ───────────────────────────────────────────
-  static const Color primaryDark = Color(0xFF1E2D3D);
-  static const Color primaryGreen = Color(0xFF5B8A72);
-  static const Color background = Color(0xFFF5F0E8);
+  // A deep library blue anchors every screen; warm neutrals keep long lists calm.
+  static const Color primaryDark = Color(0xFF12254E);
+  static const Color primaryGreen = Color(0xFF3E7D68);
+  static const Color background = Color(0xFFF7F5F0);
   static const Color cardBackground = Color(0xFFFFFFFF);
-  static const Color surfaceLight = Color(0xFFF0EBE0);
-  static const Color textPrimary = Color(0xFF1E2D3D);
+  static const Color surfaceLight = Color(0xFFEDEFF4);
+  static const Color textPrimary = Color(0xFF12254E);
   static const Color textSecondary = Color(0xFF6B7280);
   static const Color textMuted = Color(0xFF9CA3AF);
   static const Color avatarOrange = Color(0xFFE8943A);
-  static const Color divider = Color(0xFFE5E0D5);
+  static const Color divider = Color(0xFFE0E5EF);
   static const Color errorRed = Color(0xFFDC2626);
   static const Color successGreen = Color(0xFF16A34A);
   static const Color warningAmber = Color(0xFFF59E0B);
@@ -133,23 +134,23 @@ class AppTheme {
         filled: false,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: divider),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: divider),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: primaryDark, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: errorRed),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: errorRed, width: 1.5),
         ),
         hintStyle: GoogleFonts.inter(
@@ -180,7 +181,7 @@ class AppTheme {
         selectedItemColor: primaryDark,
         unselectedItemColor: textMuted,
         type: BottomNavigationBarType.fixed,
-        elevation: 8,
+        elevation: 0,
         selectedLabelStyle: GoogleFonts.inter(
           fontSize: 11,
           fontWeight: FontWeight.w600,
@@ -200,8 +201,8 @@ class AppTheme {
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: divider, width: 0.5),
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: divider, width: 0.8),
         ),
       ),
     );

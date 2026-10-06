@@ -6,44 +6,7 @@ import 'profile_screen.dart';
 import 'student_seats_screen.dart';
 import 'student_bookings_screen.dart';
 import 'student_books_screen.dart';
-
-/// Placeholder screen for features not yet implemented.
-class _PlaceholderScreen extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  const _PlaceholderScreen({required this.title, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 64, color: AppTheme.textMuted.withValues(alpha: 0.4)),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Coming soon',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: AppTheme.textMuted,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+import 'student_home_screen.dart';
 
 /// Student bottom navigation shell.
 class StudentShell extends StatefulWidget {
@@ -60,7 +23,14 @@ class _StudentShellState extends State<StudentShell> {
   @override
   Widget build(BuildContext context) {
     final screens = [
-      const _PlaceholderScreen(title: 'Home', icon: Icons.home_outlined),
+      StudentHomeScreen(
+        onNavigateTab: (index) {
+          setState(() {
+            _currentIndex = index;
+            if (index == 2) _bookingsKeyCounter++;
+          });
+        },
+      ),
       const StudentSeatsScreen(),
       StudentBookingsScreen(key: ValueKey(_bookingsKeyCounter)),
       const StudentBooksScreen(),
