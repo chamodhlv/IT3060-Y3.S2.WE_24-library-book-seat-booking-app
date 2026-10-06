@@ -123,3 +123,50 @@ VALUES
     'The leading textbook in Artificial Intelligence, used in over 1400 universities in 128 countries.',
     'Shelf C2', 3, 2, TRUE
   );
+
+-- ============================================================
+-- 7. Book Reservations & Borrowing Table Setup
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.book_reservations (
+  id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  book_id             UUID        NOT NULL REFERENCES public.books(id) ON DELETE CASCADE,
+  user_id             UUID        NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  status              TEXT        NOT NULL DEFAULT 'reserved'
+    CHECK (status IN ('reserved', 'borrowed', 'returned', 'cancelled')),
+  qr_token            TEXT        UNIQUE,
+  reserved_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  borrowed_at         TIMESTAMPTZ,
+  due_date            TIMESTAMPTZ,
+  returned_at         TIMESTAMPTZ,
+  cancelled_at        TIMESTAMPTZ,
+  cancellation_reason TEXT,
+  notes               TEXT,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ
+);
+
+-- Enable RLS
+ALTER TABLE public.book_reservations ENABLE ROW LEVEL SECURITY;
+
+-- Drop old policies
+DROP POLICY IF EXISTS "Public full access book_reservations" ON public.book_reservations;
+
+-- Create policy
+CREATE POLICY "Public full access book_reservations" ON public.book_reservations
+FOR ALL
+TO public
+USING (true)
+WITH CHECK (true);
+
+-- Grant privileges
+GRANT ALL ON TABLE public.book_reservations TO anon;
+GRANT ALL ON TABLE public.book_reservations TO authenticated;
+GRANT ALL ON TABLE public.book_reservations TO service_role;
+
+-- Performance indexes
+CREATE INDEX IF NOT EXISTS idx_book_res_user    ON public.book_reservations(user_id);
+CREATE INDEX IF NOT EXISTS idx_book_res_book    ON public.book_reservations(book_id);
+CREATE INDEX IF NOT EXISTS idx_book_res_status  ON public.book_reservations(status);
+CREATE INDEX IF NOT EXISTS idx_book_res_qr      ON public.book_reservations(qr_token);
+
