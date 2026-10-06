@@ -145,7 +145,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(firstName),
-                const SizedBox(height: 18),
                 _buildLibraryPulseBanner(),
                 const SizedBox(height: 20),
                 _buildActiveReservationsSpotlight(),
@@ -168,7 +167,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   Widget _buildHeader(String firstName) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 46),
       decoration: const BoxDecoration(
         color: AppTheme.primaryDark,
         borderRadius: BorderRadius.all(Radius.circular(26)),
@@ -206,23 +205,32 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(
+                _greeting,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white.withValues(alpha: 0.72),
+                ),
+              ),
+              const SizedBox(height: 2),
               Row(
                 children: [
                   Flexible(
                     child: Text(
-                      '$_greeting, $firstName',
+                      firstName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.inter(
-                        fontSize: 20,
+                        fontSize: 21,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
-                        letterSpacing: -0.3,
+                        letterSpacing: -0.4,
                       ),
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const Text('👋', style: TextStyle(fontSize: 18)),
+                  const Text('👋', style: TextStyle(fontSize: 17)),
                 ],
               ),
               const SizedBox(height: 2),
@@ -291,7 +299,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     return Transform.translate(
       offset: const Offset(0, -28),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -304,7 +312,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           )
         ],
       ),
-        child: Column(
+      child: Column(
         children: [
           Row(
             children: [
@@ -317,15 +325,25 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                'Library Open · 8:00 AM – 8:00 PM',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
+              Expanded(
+                child: Text(
+                  'Library open',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
               ),
-              const Spacer(),
+              Text(
+                '8:00 AM – 8:00 PM',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -343,30 +361,32 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: AppTheme.divider),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Row(
             children: [
-              _buildPulseStat(
-                icon: Icons.event_seat_rounded,
-                iconColor: AppTheme.primaryGreen,
-                value: '$_totalActiveSeats Available',
-                label: 'Desks & Pods',
-                onTap: () => widget.onNavigateTab(1),
+              Expanded(
+                child: _buildPulseStat(
+                  icon: Icons.event_seat_rounded,
+                  iconColor: AppTheme.primaryGreen,
+                  value: '$_totalActiveSeats',
+                  label: 'Desks & pods free',
+                  onTap: () => widget.onNavigateTab(1),
+                ),
               ),
-              Container(width: 1, height: 28, color: AppTheme.divider),
-              _buildPulseStat(
-                icon: Icons.menu_book_rounded,
-                iconColor: const Color(0xFF2E86C1),
-                value: '$_availableCopiesCount On Shelf',
-                label: 'Physical Copies',
-                onTap: () => widget.onNavigateTab(3),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildPulseStat(
+                  icon: Icons.menu_book_rounded,
+                  iconColor: const Color(0xFF2E86C1),
+                  value: '$_availableCopiesCount',
+                  label: 'Books on shelf',
+                  onTap: () => widget.onNavigateTab(3),
+                ),
               ),
             ],
           ),
         ],
-        ),
+      ),
       ),
     );
   }
@@ -378,10 +398,15 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     required String label,
     required VoidCallback onTap,
   }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppTheme.background,
+          borderRadius: BorderRadius.circular(14),
+        ),
         child: Row(
           children: [
             Container(
@@ -403,8 +428,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
                       color: AppTheme.textPrimary,
                     ),
                   ),

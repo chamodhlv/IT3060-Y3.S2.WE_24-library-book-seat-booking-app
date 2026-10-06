@@ -375,7 +375,8 @@ class _LibrarianHomeScreenState extends State<LibrarianHomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildStaffHeader(staffName),
-                const SizedBox(height: 18),
+                _buildOperationsPulse(),
+                const SizedBox(height: 22),
                 _buildDeskMetricsGrid(),
                 const SizedBox(height: 22),
                 _buildQuickOperationsCard(),
@@ -394,102 +395,255 @@ class _LibrarianHomeScreenState extends State<LibrarianHomeScreen> {
   // ─── STAFF HEADER ────────────────────────────────────────────────────────
 
   Widget _buildStaffHeader(String staffName) {
-    return Row(
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: AppTheme.primaryDark,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            _user?.initials ?? 'LP',
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-            ),
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Librarian Desk',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.primaryGreen,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              Text(
-                staffName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.textPrimary,
-                  letterSpacing: -0.3,
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Instant QR Scan Button
-        GestureDetector(
-          onTap: _openQrScanner,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 48),
+      decoration: const BoxDecoration(
+        color: AppTheme.primaryDark,
+        borderRadius: BorderRadius.all(Radius.circular(26)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AppTheme.primaryDark,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.primaryDark.withValues(alpha: 0.25),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
+              color: AppTheme.avatarOrange,
+              borderRadius: BorderRadius.circular(16),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+            child: Text(
+              _user?.initials ?? 'LP',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.qr_code_scanner_rounded,
-                    color: Colors.white, size: 20),
-                const SizedBox(width: 6),
                 Text(
-                  'Scan QR',
+                  'LIBRARIAN DESK',
                   style: GoogleFonts.inter(
-                    fontSize: 13,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
+                    color: Colors.white.withValues(alpha: 0.65),
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  staffName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
                     color: Colors.white,
+                    letterSpacing: -0.35,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Today\'s service overview',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.7),
                   ),
                 ),
               ],
             ),
           ),
+          Column(
+            children: [
+              _buildHeaderIcon(
+                icon: Icons.qr_code_scanner_rounded,
+                tooltip: 'Scan QR',
+                onTap: _openQrScanner,
+              ),
+              const SizedBox(height: 6),
+              _buildHeaderIcon(
+                icon: Icons.logout_rounded,
+                tooltip: 'Sign out',
+                onTap: widget.onSignOut,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderIcon({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: Icon(icon, color: Colors.white, size: 20),
         ),
-        const SizedBox(width: 4),
-        IconButton(
-          onPressed: widget.onSignOut,
-          tooltip: 'Sign out',
-          icon: const Icon(Icons.logout_rounded,
-              color: AppTheme.textSecondary, size: 22),
+      ),
+    );
+  }
+
+  Widget _buildOperationsPulse() {
+    return Transform.translate(
+      offset: const Offset(0, -30),
+      child: Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(19),
+        border: Border.all(color: AppTheme.divider),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: const BoxDecoration(
+                  color: AppTheme.successGreen,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Library desk open',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryGreen.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(
+                  '8:00 AM – 8:00 PM',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.primaryGreen,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _buildPulseTile(
+                  icon: Icons.event_seat_rounded,
+                  color: AppTheme.primaryGreen,
+                  value: '${_todaySeatBookings.length}',
+                  label: 'Seats scheduled',
+                  onTap: () => widget.onNavigateTab(1),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildPulseTile(
+                  icon: Icons.bookmark_added_rounded,
+                  color: const Color(0xFFD97706),
+                  value: '${_pendingHolds.length}',
+                  label: 'Holds to process',
+                  onTap: () => widget.onNavigateTab(2),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      ),
+    );
+  }
+
+  Widget _buildPulseTile({
+    required IconData icon,
+    required Color color,
+    required String value,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppTheme.background,
+          borderRadius: BorderRadius.circular(14),
         ),
-      ],
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 18, color: color),
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value,
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
