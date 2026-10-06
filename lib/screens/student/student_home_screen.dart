@@ -166,14 +166,21 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   // ─── HEADER ─────────────────────────────────────────────────────────────
 
   Widget _buildHeader(String firstName) {
-    return Row(
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: const BoxDecoration(
+        color: AppTheme.primaryDark,
+        borderRadius: BorderRadius.all(Radius.circular(26)),
+      ),
+      child: Row(
       children: [
         // Avatar with Initials
         Container(
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: AppTheme.primaryDark,
+            color: AppTheme.avatarOrange,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
@@ -209,7 +216,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                       style: GoogleFonts.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
-                        color: AppTheme.textPrimary,
+                        color: Colors.white,
                         letterSpacing: -0.3,
                       ),
                     ),
@@ -226,7 +233,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: AppTheme.textSecondary,
+                  color: Colors.white70,
                 ),
               ),
             ],
@@ -245,16 +252,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Colors.white.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppTheme.divider),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                )
-              ],
             ),
             child: Stack(
               alignment: Alignment.center,
@@ -262,7 +261,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                 const Icon(
                   Icons.notifications_outlined,
                   size: 22,
-                  color: AppTheme.textPrimary,
+                  color: Colors.white,
                 ),
                 if (_unreadNotifsCount > 0)
                   Positioned(
@@ -281,15 +280,18 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             ),
           ),
         ),
-      ],
+        ],
+      ),
     );
   }
 
   // ─── LIBRARY STATUS & LIVE STATS ────────────────────────────────────────
 
   Widget _buildLibraryPulseBanner() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    return Transform.translate(
+      offset: const Offset(0, -28),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -302,7 +304,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           )
         ],
       ),
-      child: Column(
+        child: Column(
         children: [
           Row(
             children: [
@@ -364,6 +366,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             ],
           ),
         ],
+        ),
       ),
     );
   }
@@ -437,12 +440,12 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
         Row(
           children: [
             Text(
-              'ACTIVE RESERVATIONS',
+              'Your reservation',
               style: GoogleFonts.inter(
-                fontSize: 11,
+                fontSize: 18,
                 fontWeight: FontWeight.w800,
-                color: AppTheme.textMuted,
-                letterSpacing: 1.2,
+                color: AppTheme.textPrimary,
+                letterSpacing: -0.2,
               ),
             ),
             const Spacer(),
@@ -473,14 +476,14 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1E2D3D), Color(0xFF2C3E50)],
+          colors: [Color(0xFF12254E), Color(0xFF1A376D)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1E2D3D).withValues(alpha: 0.25),
+            color: const Color(0xFF12254E).withValues(alpha: 0.25),
             blurRadius: 14,
             offset: const Offset(0, 6),
           )
@@ -590,18 +593,27 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           ),
         ],
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(10),
       child: Row(
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 72,
+            height: 94,
             decoration: BoxDecoration(
-              color: AppTheme.primaryGreen.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+              color: AppTheme.primaryDark,
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.event_seat_rounded,
-                size: 22, color: AppTheme.primaryGreen),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.event_seat_rounded, size: 22, color: Colors.white70),
+                const SizedBox(height: 8),
+                Text(
+                  b.seat?.label ?? 'Seat',
+                  style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white),
+                ),
+              ],
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -611,7 +623,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                 Row(
                   children: [
                     Text(
-                      b.seat?.label ?? 'Seat Reserved',
+                      b.seat?.section.displayName ?? 'Main Hall',
                       style: GoogleFonts.inter(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -811,12 +823,12 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'EXPLORE SERVICES',
+          'Quick actions',
           style: GoogleFonts.inter(
-            fontSize: 11,
+            fontSize: 18,
             fontWeight: FontWeight.w800,
-            color: AppTheme.textMuted,
-            letterSpacing: 1.2,
+            color: AppTheme.textPrimary,
+            letterSpacing: -0.2,
           ),
         ),
         const SizedBox(height: 12),
@@ -943,12 +955,12 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
         Row(
           children: [
             Text(
-              'FEATURED CATALOGUE',
+              'Featured books',
               style: GoogleFonts.inter(
-                fontSize: 11,
+                fontSize: 18,
                 fontWeight: FontWeight.w800,
-                color: AppTheme.textMuted,
-                letterSpacing: 1.2,
+                color: AppTheme.textPrimary,
+                letterSpacing: -0.2,
               ),
             ),
             const Spacer(),
@@ -984,7 +996,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
   Widget _buildFeaturedBookCard(Book book, int index) {
     const avatarColors = [
-      Color(0xFF1E2D3D),
+      Color(0xFF12254E),
       Color(0xFF5B8A72),
       Color(0xFF3B5998),
       Color(0xFF6B4226),
@@ -1099,7 +1111,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               const Icon(Icons.stars_rounded, size: 20, color: AppTheme.primaryGreen),
               const SizedBox(width: 8),
               Text(
-                'Library Amenities & Rules',
+                'Amenities and rules',
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,

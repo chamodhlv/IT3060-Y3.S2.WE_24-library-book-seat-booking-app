@@ -25,7 +25,7 @@ class _LibrarianBooksScreenState extends State<LibrarianBooksScreen>
 
   // Avatar color palette cycling through a fixed list
   static const List<Color> _avatarColors = [
-    Color(0xFF1E2D3D), // primaryDark
+    Color(0xFF12254E), // primaryDark
     Color(0xFF5B8A72), // primaryGreen
     Color(0xFF3B5998),
     Color(0xFF6B4226),

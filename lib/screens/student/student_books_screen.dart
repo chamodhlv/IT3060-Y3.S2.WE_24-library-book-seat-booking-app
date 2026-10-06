@@ -6,6 +6,7 @@ import '../../models/book_model.dart';
 import '../../services/book_service.dart';
 import '../../services/auth_service.dart';
 import 'book_reservation_confirmation_screen.dart';
+import '../shared/notifications_screen.dart';
 
 /// Student: Browse the library catalogue (read-only).
 class StudentBooksScreen extends StatefulWidget {
@@ -25,7 +26,7 @@ class _StudentBooksScreenState extends State<StudentBooksScreen> {
   Timer? _debounce;
 
   static const List<Color> _avatarColors = [
-    Color(0xFF1E2D3D),
+    Color(0xFF12254E),
     Color(0xFF5B8A72),
     Color(0xFF3B5998),
     Color(0xFF6B4226),
@@ -125,24 +126,29 @@ class _StudentBooksScreenState extends State<StudentBooksScreen> {
   }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 20, 16, 18),
+      decoration: const BoxDecoration(
+        color: AppTheme.primaryDark,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+      ),
+      child: Row(
         children: [
-          Text(
-            'Library Catalogue',
-            style: GoogleFonts.inter(
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              color: AppTheme.textPrimary,
-            ),
-          ),
-          Text(
-            'Browse and find available books',
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              color: AppTheme.textSecondary,
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Library Catalogue', style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w800, color: Colors.white)),
+              const SizedBox(height: 4),
+              Text('Browse and reserve library books', style: GoogleFonts.inter(fontSize: 13, color: Colors.white70)),
+            ],
+          )),
+          Material(
+            color: Colors.white.withValues(alpha: 0.12),
+            shape: const CircleBorder(),
+            child: IconButton(
+              icon: const Icon(Icons.notifications_none_rounded, color: Colors.white),
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen())),
             ),
           ),
         ],
