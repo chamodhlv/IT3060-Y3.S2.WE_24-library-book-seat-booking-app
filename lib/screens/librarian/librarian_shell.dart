@@ -9,6 +9,7 @@ import 'librarian_seats_screen.dart';
 import 'librarian_bookings_screen.dart';
 import 'librarian_books_screen.dart';
 import 'librarian_home_screen.dart';
+import '../shared/notifications_screen.dart';
 
 /// Librarian bottom navigation shell.
 /// Same tabs as student but the last tab is "Users" instead of "Profile".
@@ -92,15 +93,28 @@ class _LibrarianShellState extends State<LibrarianShell> {
       appBar: _currentIndex == 0
           ? null
           : AppBar(
+              backgroundColor: AppTheme.primaryDark,
+              iconTheme: const IconThemeData(color: Colors.white),
               title: Text(
                 _getTitleForIndex(_currentIndex),
                 style: GoogleFonts.inter(
-                    fontSize: 20, fontWeight: FontWeight.w700),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white),
               ),
               actions: [
                 IconButton(
+                  icon: const Icon(Icons.notifications_none_rounded,
+                      color: Colors.white),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const NotificationsScreen()),
+                  ),
+                  tooltip: 'Notifications',
+                ),
+                IconButton(
                   icon: const Icon(Icons.logout_rounded,
-                      color: AppTheme.textSecondary),
+                      color: Colors.white70),
                   onPressed: _signOut,
                   tooltip: 'Log out',
                 ),

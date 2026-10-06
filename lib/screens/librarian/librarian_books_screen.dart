@@ -110,8 +110,14 @@ class _LibrarianBooksScreenState extends State<LibrarianBooksScreen>
   }
 
   Widget _buildHeader(int count) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.all(18),
+      decoration: const BoxDecoration(
+        color: AppTheme.primaryDark,
+        borderRadius: BorderRadius.all(Radius.circular(20)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -120,14 +126,14 @@ class _LibrarianBooksScreenState extends State<LibrarianBooksScreen>
             style: GoogleFonts.inter(
               fontSize: 26,
               fontWeight: FontWeight.w800,
-              color: AppTheme.textPrimary,
+              color: Colors.white,
             ),
           ),
           Text(
             'Admin Catalogue & Stock Controls',
             style: GoogleFonts.inter(
               fontSize: 13,
-              color: AppTheme.textSecondary,
+              color: Colors.white70,
             ),
           ),
         ],

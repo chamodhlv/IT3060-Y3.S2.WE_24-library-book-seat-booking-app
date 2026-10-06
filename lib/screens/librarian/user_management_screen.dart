@@ -87,23 +87,40 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-              child: Text(
-                'Users',
-                style: Theme.of(context).textTheme.headlineMedium,
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              padding: const EdgeInsets.all(18),
+              decoration: const BoxDecoration(
+                color: AppTheme.primaryDark,
+                borderRadius: BorderRadius.all(Radius.circular(20)),
               ),
-            ),
-            const SizedBox(height: 4),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                '${_filteredUsers.length} users',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: AppTheme.textMuted,
-                ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: const Icon(Icons.groups_rounded, color: Colors.white),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('User directory',
+                          style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white)),
+                      const SizedBox(height: 3),
+                      Text('${_filteredUsers.length} users',
+                          style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
+                    ],
+                  ),
+                ],
               ),
             ),
 
