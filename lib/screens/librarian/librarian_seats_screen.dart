@@ -52,6 +52,8 @@ class _LibrarianSeatsScreenState extends State<LibrarianSeatsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  _buildOperationsHeader(),
+                  const SizedBox(height: 16),
                   _buildSectionTabs(),
                   const SizedBox(height: 16),
                   Text(
@@ -80,6 +82,46 @@ class _LibrarianSeatsScreenState extends State<LibrarianSeatsScreen> {
         label: Text('Add New Seat',
             style: GoogleFonts.inter(
                 color: Colors.white, fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+
+  Widget _buildOperationsHeader() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: const BoxDecoration(
+        color: AppTheme.primaryDark,
+        borderRadius: BorderRadius.all(Radius.circular(20)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.event_seat_rounded, color: Colors.white),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Seat operations',
+                    style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white)),
+                const SizedBox(height: 3),
+                Text('${_seats.length} seats in ${_selectedSection.displayName}',
+                    style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

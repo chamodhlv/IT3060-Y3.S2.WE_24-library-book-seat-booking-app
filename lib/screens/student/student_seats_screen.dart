@@ -79,8 +79,13 @@ class _StudentSeatsScreenState extends State<StudentSeatsScreen> {
   }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+      decoration: const BoxDecoration(
+        color: AppTheme.primaryDark,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+      ),
       child: Row(
         children: [
           Expanded(
@@ -92,7 +97,7 @@ class _StudentSeatsScreenState extends State<StudentSeatsScreen> {
                   style: GoogleFonts.inter(
                     fontSize: 26,
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -111,14 +116,14 @@ class _StudentSeatsScreenState extends State<StudentSeatsScreen> {
                       'Live · ${_syncLabel()}',
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: AppTheme.textMuted,
+                        color: Colors.white70,
                       ),
                     ),
                     const SizedBox(width: 8),
                     GestureDetector(
                       onTap: _load,
                       child: const Icon(Icons.refresh_rounded,
-                          size: 14, color: AppTheme.textMuted),
+                          size: 14, color: Colors.white70),
                     ),
                   ],
                 ),

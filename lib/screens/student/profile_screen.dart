@@ -4,6 +4,7 @@ import '../../config/app_theme.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../auth/sign_in_screen.dart';
+import '../shared/notifications_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -79,29 +80,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
+                decoration: const BoxDecoration(
+                  color: AppTheme.primaryDark,
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       'My Profile',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    GestureDetector(
-                      onTap: () => _navigateToEditProfile(),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppTheme.surfaceLight,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.settings_outlined,
-                          color: AppTheme.textSecondary,
-                          size: 22,
-                        ),
+                      style: GoogleFonts.inter(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
                       ),
+                    ),
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.notifications_none_rounded,
+                                color: Colors.white, size: 22),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () => _navigateToEditProfile(),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.settings_outlined,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -109,21 +138,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               const SizedBox(height: 20),
 
-              // User info card with dark background
+              // Member identity card
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryDark,
-                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryDark.withValues(alpha: 0.10),
+                        blurRadius: 18,
+                        offset: const Offset(0, 7),
+                      ),
+                    ],
                   ),
                   child: Row(
                     children: [
                       // Avatar
                       CircleAvatar(
                         radius: 28,
-                        backgroundColor: AppTheme.avatarOrange,
+                        backgroundColor: AppTheme.primaryGreen,
                         child: Text(
                           _user?.initials ?? '?',
                           style: GoogleFonts.inter(
@@ -143,7 +179,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               style: GoogleFonts.inter(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                                color: AppTheme.textPrimary,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -151,7 +187,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               'ID: ${_user?.maskedId ?? ''} · ${_user?.role.displayName ?? ''}',
                               style: GoogleFonts.inter(
                                 fontSize: 13,
-                                color: Colors.white70,
+                                color: AppTheme.textSecondary,
                               ),
                             ),
                           ],

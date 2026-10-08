@@ -100,8 +100,14 @@ class _LibrarianBookingsScreenState extends State<LibrarianBookingsScreen>
   }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.all(18),
+      decoration: const BoxDecoration(
+        color: AppTheme.primaryDark,
+        borderRadius: BorderRadius.all(Radius.circular(20)),
+      ),
       child: Row(
         children: [
           Expanded(
@@ -113,14 +119,14 @@ class _LibrarianBookingsScreenState extends State<LibrarianBookingsScreen>
                   style: GoogleFonts.inter(
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary),
+                      color: Colors.white),
                 ),
                 Text(
                   _selectedCategoryIndex == 0
                       ? 'Manage seat check-ins & reservations'
                       : 'Manage student book hold requests & issues',
                   style: GoogleFonts.inter(
-                      fontSize: 12, color: AppTheme.textSecondary),
+                      fontSize: 12, color: Colors.white70),
                 ),
               ],
             ),
@@ -131,7 +137,7 @@ class _LibrarianBookingsScreenState extends State<LibrarianBookingsScreen>
             child: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppTheme.primaryDark,
+                color: Colors.white.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(Icons.qr_code_scanner_rounded,

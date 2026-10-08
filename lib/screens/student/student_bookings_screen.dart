@@ -7,6 +7,7 @@ import '../../models/book_reservation_model.dart';
 import '../../services/seat_service.dart';
 import '../../services/book_service.dart';
 import '../../services/auth_service.dart';
+import '../shared/notifications_screen.dart';
 
 /// Student: My bookings screen.
 class StudentBookingsScreen extends StatefulWidget {
@@ -125,8 +126,13 @@ class _StudentBookingsScreenState extends State<StudentBookingsScreen>
 
   Widget _buildHeader() {
     final active = _upcoming.length;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 20, 16, 18),
+      decoration: const BoxDecoration(
+        color: AppTheme.primaryDark,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+      ),
       child: Row(
         children: [
           Expanded(
@@ -138,7 +144,7 @@ class _StudentBookingsScreenState extends State<StudentBookingsScreen>
                   style: GoogleFonts.inter(
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary),
+                      color: Colors.white),
                 ),
                 Text(
                   _selectedCategoryIndex == 0
@@ -156,15 +162,26 @@ class _StudentBookingsScreenState extends State<StudentBookingsScreen>
                               (_selectedCategoryIndex == 1 &&
                                   (_currentHolds.isNotEmpty ||
                                       _borrowedBooks.isNotEmpty))
-                          ? AppTheme.primaryGreen
-                          : AppTheme.textSecondary),
+                          ? const Color(0xFF80D7B5)
+                          : Colors.white70),
                 ),
               ],
             ),
           ),
+          Material(
+            color: Colors.white.withValues(alpha: 0.12),
+            shape: const CircleBorder(),
+            child: IconButton(
+              icon: const Icon(Icons.notifications_none_rounded),
+              color: Colors.white,
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+              ),
+            ),
+          ),
           IconButton(
-            icon: const Icon(Icons.refresh),
-            color: AppTheme.textPrimary,
+            icon: const Icon(Icons.refresh_rounded),
+            color: Colors.white70,
             onPressed: _load,
           ),
         ],

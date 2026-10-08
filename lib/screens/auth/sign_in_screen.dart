@@ -83,58 +83,34 @@ class _SignInScreenState extends State<SignInScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 40),
-
-                // Logo & App Name
-                Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryGreen,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Center(
-                        child: Image.asset(
-                          'assets/images/logo.png',
-                          width: 40,
-                          height: 40,
-                          errorBuilder: (context, error, stackTrace) => const Icon(
-                            Icons.local_library,
-                            color: Colors.white,
-                            size: 22,
-                          ),
+                const SizedBox(height: 18),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: const BoxDecoration(
+                    color: AppTheme.primaryDark,
+                    borderRadius: BorderRadius.all(Radius.circular(24)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Container(
+                          width: 40, height: 40,
+                          decoration: BoxDecoration(color: AppTheme.primaryGreen, borderRadius: BorderRadius.circular(12)),
+                          child: Center(child: Image.asset('assets/images/logo.png', width: 40, height: 40,
+                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.local_library, color: Colors.white, size: 22))),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'LibraryPlus',
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary,
-                      ),
-                    ),
-                  ],
+                        const SizedBox(width: 10),
+                        Text('LibraryPlus', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                      ]),
+                      const SizedBox(height: 28),
+                      Text('Welcome back', style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white)),
+                      const SizedBox(height: 8),
+                      Text('Sign in to reserve books and seats at the library.', style: GoogleFonts.inter(fontSize: 14, height: 1.4, color: Colors.white70)),
+                    ],
+                  ),
                 ),
-
-                const SizedBox(height: 32),
-
-                // Header
-                Text(
-                  'Welcome back',
-                  style: Theme.of(context).textTheme.headlineLarge,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Sign in to reserve books and seats at the library.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-
-                const SizedBox(height: 8),
-                const Divider(),
                 const SizedBox(height: 28),
 
                 // Email

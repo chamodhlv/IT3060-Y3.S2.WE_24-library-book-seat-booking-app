@@ -29,17 +29,25 @@ void main() async {
     ),
   );
 
-  // Initialize Supabase
-  await Supabase.initialize(
-    url: SupabaseConfig.supabaseUrl,
-    anonKey: SupabaseConfig.supabaseAnonKey, // ignore: deprecated_member_use
-  );
+  // Never leave the web canvas blank if a remote service is unavailable.
+  // The app still mounts and presents a clear retry screen instead.
+  String? startupError;
+  try {
+    await Supabase.initialize(
+      url: SupabaseConfig.supabaseUrl,
+      anonKey: SupabaseConfig.supabaseAnonKey, // ignore: deprecated_member_use
+    );
+  } catch (error) {
+    startupError = error.toString();
+  }
 
-  runApp(const LibraryPlusApp());
+  runApp(LibraryPlusApp(startupError: startupError));
 }
 
 class LibraryPlusApp extends StatelessWidget {
-  const LibraryPlusApp({super.key});
+  const LibraryPlusApp({super.key, this.startupError});
+
+  final String? startupError;
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +55,43 @@ class LibraryPlusApp extends StatelessWidget {
       title: 'LibraryPlus',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const AuthGate(),
+      home: startupError == null
+          ? const AuthGate()
+          : StartupFailureScreen(message: startupError!),
+    );
+  }
+}
+
+class StartupFailureScreen extends StatelessWidget {
+  const StartupFailureScreen({super.key, required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.cloud_off_rounded,
+                  color: AppTheme.primaryDark, size: 44),
+              const SizedBox(height: 16),
+              Text('LibraryPlus could not start',
+                  style: Theme.of(context).textTheme.headlineSmall),
+              const SizedBox(height: 8),
+              Text(
+                'Please check the Supabase configuration and refresh the page.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -68,8 +112,14 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> _checkAuth() async {
-    final authService = AuthService();
-    final currentUser = await authService.init();
+    AppUser? currentUser;
+    try {
+      currentUser = await AuthService().init();
+    } catch (_) {
+      // A stale browser session or temporary network failure should still
+      // allow the user to reach the sign-in screen.
+      currentUser = null;
+    }
 
     if (!mounted) return;
 

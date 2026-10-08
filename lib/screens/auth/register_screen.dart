@@ -128,21 +128,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 16),
-
-                // Header
-                Text(
-                  'Create account',
-                  style: Theme.of(context).textTheme.headlineLarge,
+                const SizedBox(height: 18),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: const BoxDecoration(
+                    color: AppTheme.primaryDark,
+                    borderRadius: BorderRadius.all(Radius.circular(24)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Create account', style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white)),
+                      const SizedBox(height: 8),
+                      Text('Join to reserve seats and check out library items.', style: GoogleFonts.inter(fontSize: 14, height: 1.4, color: Colors.white70)),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Join to reserve seats and check out library items.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-
-                const SizedBox(height: 8),
-                const Divider(),
                 const SizedBox(height: 24),
 
                 // Full Name
