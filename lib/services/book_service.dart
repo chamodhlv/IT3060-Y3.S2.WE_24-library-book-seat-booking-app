@@ -388,6 +388,7 @@ class BookService {
         'body':
             'Your copy of "${bookData['title']}" is held. Visit the library front desk to pick it up.',
         'type': 'booking_confirmed',
+        'related_booking_id': res['id'],
       });
     } catch (_) {}
 
@@ -436,6 +437,17 @@ class BookService {
     return BookReservation.fromMap(data);
   }
 
+  /// Fetch the latest reservation state for a confirmation/status screen.
+  Future<BookReservation?> getReservationById(String reservationId) async {
+    final data = await _client
+        .from('book_reservations')
+        .select('*, books(*)')
+        .eq('id', reservationId)
+        .maybeSingle();
+    if (data == null) return null;
+    return BookReservation.fromMap(data);
+  }
+
   /// Librarian marks a reserved book as borrowed (issued to student).
   Future<void> markAsBorrowed(String reservationId, {DateTime? dueDate}) async {
     final res = await _client
@@ -444,7 +456,18 @@ class BookService {
         .eq('id', reservationId)
         .single();
 
+    if (res['status'] != 'reserved') {
+      throw Exception(
+          'Only a reserved book hold can be marked as borrowed.');
+    }
+
     final now = DateTime.now();
+    final reservedAt = DateTime.parse(res['reserved_at'] as String);
+    final holdExpiresAt = reservedAt.add(const Duration(days: 3));
+    if (!now.isBefore(holdExpiresAt)) {
+      throw Exception(
+          'This book hold expired on ${holdExpiresAt.day}/${holdExpiresAt.month}/${holdExpiresAt.year}.');
+    }
     final due = dueDate ?? now.add(const Duration(days: 14));
 
     await _client.from('book_reservations').update({
@@ -463,6 +486,7 @@ class BookService {
         'title': 'Book Borrowed ✓',
         'body': 'You have checked out "$bookTitle". Due date is $dueStr.',
         'type': 'booking_checkin',
+        'related_booking_id': reservationId,
       });
     } catch (_) {}
   }
@@ -475,6 +499,11 @@ class BookService {
         .select('*, books(id, title, total_copies, available_copies)')
         .eq('id', reservationId)
         .single();
+
+    if (res['status'] != 'borrowed') {
+      throw Exception(
+          'Only a borrowed book can be marked as returned.');
+    }
 
     final now = DateTime.now();
     await _client.from('book_reservations').update({
@@ -502,6 +531,7 @@ class BookService {
         'title': 'Book Returned 📖',
         'body': 'Your copy of "${book?['title'] ?? 'book'}" has been successfully returned.',
         'type': 'info',
+        'related_booking_id': reservationId,
       });
     } catch (_) {}
   }
@@ -519,7 +549,9 @@ class BookService {
         .single();
 
     final currentStatus = res['status'] as String;
-    if (currentStatus == 'returned' || currentStatus == 'cancelled') return;
+    if (currentStatus != 'reserved') {
+      throw Exception('Only an active book hold can be cancelled.');
+    }
 
     final now = DateTime.now();
     await _client.from('book_reservations').update({
@@ -550,6 +582,7 @@ class BookService {
         'title': 'Hold Cancelled',
         'body': 'Reservation for "${res['books']?['title'] ?? 'book'}" was cancelled.',
         'type': 'booking_cancelled',
+        'related_booking_id': reservationId,
       });
     } catch (_) {}
   }

@@ -90,7 +90,14 @@ void main() {
         createdAt: now,
       );
       expect(hold.isHoldExpired, isFalse);
+      expect(hold.isPickupAvailable, isTrue);
       expect(hold.holdExpiresAt.difference(now).inDays, 3);
+
+      final expiredHold = hold.copyWith(
+        reservedAt: now.subtract(const Duration(days: 4)),
+      );
+      expect(expiredHold.isHoldExpired, isTrue);
+      expect(expiredHold.isPickupAvailable, isFalse);
     });
   });
 }

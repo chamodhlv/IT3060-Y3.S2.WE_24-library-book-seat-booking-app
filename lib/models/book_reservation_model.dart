@@ -103,6 +103,9 @@ class BookReservation {
   bool get isHoldExpired =>
       isReserved && DateTime.now().isAfter(holdExpiresAt);
 
+  /// Whether this reservation can currently be picked up at the desk.
+  bool get isPickupAvailable => isReserved && !isHoldExpired;
+
   /// Check whether borrowed book is overdue.
   bool get isOverdue {
     if (!isBorrowed || dueDate == null) return false;

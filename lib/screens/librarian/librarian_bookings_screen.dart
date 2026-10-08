@@ -70,7 +70,7 @@ class _LibrarianBookingsScreenState extends State<LibrarianBookingsScreen>
       .toList();
 
   List<BookReservation> get _holdRequests =>
-      _bookReservations.where((r) => r.isReserved).toList();
+      _bookReservations.where((r) => r.isPickupAvailable).toList();
   List<BookReservation> get _issuedBooks =>
       _bookReservations.where((r) => r.isBorrowed).toList();
   List<BookReservation> get _returnedBooks =>
@@ -1480,6 +1480,18 @@ class _LibrarianBookingsScreenState extends State<LibrarianBookingsScreen>
 
   Future<void> _handleBookQrAction(BookReservation res) async {
     if (res.status == BookReservationStatus.reserved) {
+      if (!res.isPickupAvailable) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'This book hold expired on ${res.holdExpiresAt.day}/${res.holdExpiresAt.month}/${res.holdExpiresAt.year}.'),
+            backgroundColor: AppTheme.warningAmber,
+          ),
+        );
+        return;
+      }
+
       final confirm = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(

@@ -25,7 +25,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> _load() async {
     final user = AuthService().currentUser;
-    if (user == null) return;
+    if (user == null) {
+      if (mounted) {
+        setState(() {
+          _notifications = [];
+          _isLoading = false;
+        });
+      }
+      return;
+    }
     setState(() => _isLoading = true);
     try {
       final notifs = await SeatService().getNotifications(user.id);

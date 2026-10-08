@@ -137,16 +137,18 @@ class _StudentSeatsScreenState extends State<StudentSeatsScreen> {
   }
 
   Widget _buildNotificationBell() {
-    return Material(
-      color: Colors.white.withValues(alpha: 0.12),
-      shape: const CircleBorder(),
-      child: IconButton(
-        icon: const Icon(Icons.notifications_none_rounded),
-        color: Colors.white,
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-        ),
-      ),
+    return IconButton(
+      icon: const Icon(Icons.notifications_outlined),
+      color: AppTheme.textPrimary,
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const NotificationsScreen(),
+          ),
+        );
+      },
+      tooltip: 'Notifications',
     );
   }
 
