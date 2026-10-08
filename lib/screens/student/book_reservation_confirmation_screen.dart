@@ -4,6 +4,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../config/app_theme.dart';
 import '../../models/book_model.dart';
 import '../../models/book_reservation_model.dart';
+import '../../services/book_service.dart';
 
 /// Screen showing book reservation confirmation and pickup QR code.
 class BookReservationConfirmationScreen extends StatefulWidget {
@@ -25,6 +26,28 @@ class _BookReservationConfirmationScreenState
     extends State<BookReservationConfirmationScreen> {
   // 0 = confirmation, 1 = QR code
   int _page = 0;
+  late BookReservation _reservation;
+  bool _isRefreshing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _reservation = widget.reservation;
+  }
+
+  Future<void> _refreshStatus() async {
+    if (_isRefreshing) return;
+    setState(() => _isRefreshing = true);
+    try {
+      final latest =
+          await BookService().getReservationById(_reservation.id);
+      if (mounted && latest != null) {
+        setState(() => _reservation = latest);
+      }
+    } finally {
+      if (mounted) setState(() => _isRefreshing = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +63,7 @@ class _BookReservationConfirmationScreenState
   }
 
   Widget _buildConfirmPage() {
-    final r = widget.reservation;
+    final r = _reservation;
     final book = widget.book;
     final expires = r.holdExpiresAt;
     final expiryFormatted =
@@ -111,6 +134,8 @@ class _BookReservationConfirmationScreenState
                   const Divider(height: 1, color: AppTheme.divider),
                 ],
                 _detailRow('Hold Expiration', 'Pickup by $expiryFormatted'),
+                const Divider(height: 1, color: AppTheme.divider),
+                _detailRow('Status', _statusLabel(r)),
               ],
             ),
           ),
@@ -147,9 +172,23 @@ class _BookReservationConfirmationScreenState
           child: Column(
             children: [
               ElevatedButton.icon(
-                onPressed: () => setState(() => _page = 1),
+                onPressed: r.isReserved ? () => setState(() => _page = 1) : null,
                 icon: const Icon(Icons.qr_code_rounded, size: 20),
-                label: const Text('View pickup QR code'),
+                label: Text(r.isReserved
+                    ? 'View pickup QR code'
+                    : 'Pickup QR unavailable'),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _isRefreshing ? null : _refreshStatus,
+                icon: _isRefreshing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Refresh status'),
               ),
               const SizedBox(height: 10),
               OutlinedButton(
@@ -166,7 +205,7 @@ class _BookReservationConfirmationScreenState
   }
 
   Widget _buildQrPage() {
-    final r = widget.reservation;
+    final r = _reservation;
     final book = widget.book;
 
     return SingleChildScrollView(
@@ -311,7 +350,7 @@ class _BookReservationConfirmationScreenState
                   Row(
                     children: [
                       Text(
-                        'Ready for pickup',
+                        _statusDescription(r),
                         style: GoogleFonts.inter(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -325,7 +364,7 @@ class _BookReservationConfirmationScreenState
                           color: const Color(0xFFFEF3C7),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Text('Held',
+                        child: Text(_statusLabel(r),
                             style: GoogleFonts.inter(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -335,7 +374,9 @@ class _BookReservationConfirmationScreenState
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Expires on ${_monthName(r.holdExpiresAt.month)} ${r.holdExpiresAt.day}',
+                    r.isReserved
+                        ? 'Expires on ${_monthName(r.holdExpiresAt.month)} ${r.holdExpiresAt.day}'
+                        : 'Last updated ${_formatDate(r.updatedAt ?? r.createdAt)}',
                     style: GoogleFonts.inter(
                         fontSize: 12, color: AppTheme.textMuted),
                   ),
@@ -403,4 +444,33 @@ class _BookReservationConfirmationScreenState
     ];
     return months[month - 1];
   }
+
+  String _statusLabel(BookReservation reservation) {
+    switch (reservation.status) {
+      case BookReservationStatus.reserved:
+        return 'Held';
+      case BookReservationStatus.borrowed:
+        return 'Borrowed';
+      case BookReservationStatus.returned:
+        return 'Returned';
+      case BookReservationStatus.cancelled:
+        return 'Cancelled';
+    }
+  }
+
+  String _statusDescription(BookReservation reservation) {
+    switch (reservation.status) {
+      case BookReservationStatus.reserved:
+        return 'Ready for pickup';
+      case BookReservationStatus.borrowed:
+        return 'Checked out';
+      case BookReservationStatus.returned:
+        return 'Returned to library';
+      case BookReservationStatus.cancelled:
+        return 'Reservation cancelled';
+    }
+  }
+
+  String _formatDate(DateTime date) =>
+      '${_monthName(date.month)} ${date.day}, ${date.year}';
 }

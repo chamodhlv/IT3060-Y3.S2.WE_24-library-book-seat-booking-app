@@ -437,6 +437,17 @@ class BookService {
     return BookReservation.fromMap(data);
   }
 
+  /// Fetch the latest reservation state for a confirmation/status screen.
+  Future<BookReservation?> getReservationById(String reservationId) async {
+    final data = await _client
+        .from('book_reservations')
+        .select('*, books(*)')
+        .eq('id', reservationId)
+        .maybeSingle();
+    if (data == null) return null;
+    return BookReservation.fromMap(data);
+  }
+
   /// Librarian marks a reserved book as borrowed (issued to student).
   Future<void> markAsBorrowed(String reservationId, {DateTime? dueDate}) async {
     final res = await _client
@@ -444,6 +455,11 @@ class BookService {
         .select('*, books(title)')
         .eq('id', reservationId)
         .single();
+
+    if (res['status'] != 'reserved') {
+      throw Exception(
+          'Only a reserved book hold can be marked as borrowed.');
+    }
 
     final now = DateTime.now();
     final due = dueDate ?? now.add(const Duration(days: 14));
@@ -477,6 +493,11 @@ class BookService {
         .select('*, books(id, title, total_copies, available_copies)')
         .eq('id', reservationId)
         .single();
+
+    if (res['status'] != 'borrowed') {
+      throw Exception(
+          'Only a borrowed book can be marked as returned.');
+    }
 
     final now = DateTime.now();
     await _client.from('book_reservations').update({
@@ -522,7 +543,9 @@ class BookService {
         .single();
 
     final currentStatus = res['status'] as String;
-    if (currentStatus == 'returned' || currentStatus == 'cancelled') return;
+    if (currentStatus != 'reserved') {
+      throw Exception('Only an active book hold can be cancelled.');
+    }
 
     final now = DateTime.now();
     await _client.from('book_reservations').update({
