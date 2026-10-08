@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 import '../../models/seat_model.dart';
 import '../../services/seat_service.dart';
+import '../shared/notifications_screen.dart';
 import 'seat_detail_screen.dart';
 
 /// Student: Seat availability overview screen.
@@ -134,7 +135,15 @@ class _StudentSeatsScreenState extends State<StudentSeatsScreen> {
     return IconButton(
       icon: const Icon(Icons.notifications_outlined),
       color: AppTheme.textPrimary,
-      onPressed: () {}, // TODO: open notifications
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const NotificationsScreen(),
+          ),
+        );
+      },
+      tooltip: 'Notifications',
     );
   }
 

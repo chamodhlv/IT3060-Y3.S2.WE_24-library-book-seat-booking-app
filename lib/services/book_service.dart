@@ -388,6 +388,7 @@ class BookService {
         'body':
             'Your copy of "${bookData['title']}" is held. Visit the library front desk to pick it up.',
         'type': 'booking_confirmed',
+        'related_booking_id': res['id'],
       });
     } catch (_) {}
 
@@ -463,6 +464,7 @@ class BookService {
         'title': 'Book Borrowed ✓',
         'body': 'You have checked out "$bookTitle". Due date is $dueStr.',
         'type': 'booking_checkin',
+        'related_booking_id': reservationId,
       });
     } catch (_) {}
   }
@@ -502,6 +504,7 @@ class BookService {
         'title': 'Book Returned 📖',
         'body': 'Your copy of "${book?['title'] ?? 'book'}" has been successfully returned.',
         'type': 'info',
+        'related_booking_id': reservationId,
       });
     } catch (_) {}
   }
@@ -550,6 +553,7 @@ class BookService {
         'title': 'Hold Cancelled',
         'body': 'Reservation for "${res['books']?['title'] ?? 'book'}" was cancelled.',
         'type': 'booking_cancelled',
+        'related_booking_id': reservationId,
       });
     } catch (_) {}
   }
