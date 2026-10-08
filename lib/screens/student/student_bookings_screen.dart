@@ -77,7 +77,7 @@ class _StudentBookingsScreenState extends State<StudentBookingsScreen>
   }
 
   List<BookReservation> get _currentHolds =>
-      _bookReservations.where((r) => r.isReserved).toList();
+      _bookReservations.where((r) => r.isPickupAvailable).toList();
 
   List<BookReservation> get _borrowedBooks =>
       _bookReservations.where((r) => r.isBorrowed).toList();

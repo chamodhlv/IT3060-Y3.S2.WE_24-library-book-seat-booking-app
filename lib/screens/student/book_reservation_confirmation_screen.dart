@@ -172,9 +172,11 @@ class _BookReservationConfirmationScreenState
           child: Column(
             children: [
               ElevatedButton.icon(
-                onPressed: r.isReserved ? () => setState(() => _page = 1) : null,
+                onPressed: r.isPickupAvailable
+                    ? () => setState(() => _page = 1)
+                    : null,
                 icon: const Icon(Icons.qr_code_rounded, size: 20),
-                label: Text(r.isReserved
+                label: Text(r.isPickupAvailable
                     ? 'View pickup QR code'
                     : 'Pickup QR unavailable'),
               ),
@@ -374,9 +376,11 @@ class _BookReservationConfirmationScreenState
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    r.isReserved
+                    r.isPickupAvailable
                         ? 'Expires on ${_monthName(r.holdExpiresAt.month)} ${r.holdExpiresAt.day}'
-                        : 'Last updated ${_formatDate(r.updatedAt ?? r.createdAt)}',
+                        : r.isHoldExpired
+                            ? 'This hold has expired'
+                            : 'Last updated ${_formatDate(r.updatedAt ?? r.createdAt)}',
                     style: GoogleFonts.inter(
                         fontSize: 12, color: AppTheme.textMuted),
                   ),

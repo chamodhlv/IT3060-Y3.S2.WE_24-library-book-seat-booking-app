@@ -462,6 +462,12 @@ class BookService {
     }
 
     final now = DateTime.now();
+    final reservedAt = DateTime.parse(res['reserved_at'] as String);
+    final holdExpiresAt = reservedAt.add(const Duration(days: 3));
+    if (!now.isBefore(holdExpiresAt)) {
+      throw Exception(
+          'This book hold expired on ${holdExpiresAt.day}/${holdExpiresAt.month}/${holdExpiresAt.year}.');
+    }
     final due = dueDate ?? now.add(const Duration(days: 14));
 
     await _client.from('book_reservations').update({
